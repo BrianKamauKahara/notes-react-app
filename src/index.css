@@ -1,0 +1,36 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  height: 100vh;
+
+  background: linear-gradient(
+    140deg,
+    #1e1f22,
+    /* deep charcoal night */ #2a2b2f,
+    /* moonlit grey */ #3a342a,
+    /* warm dusk shadow */ #4a3b2a /* sunset ember */
+  );
+  background-size: 600% 600%;
+  animation: duskDrift 30s ease-in-out infinite;
+}
+
+@keyframes duskDrift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}

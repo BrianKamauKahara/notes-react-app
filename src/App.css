@@ -1,0 +1,64 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+div#root {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  padding: 9px 26px;
+
+  width: clamp(640px, 72vw, 1200px);
+  height: 100%;
+  /* height: clamp(580px, 65vh, 900px);
+  aspect-ratio: 3 / 4; */
+}
+
+header {
+  /* position: absolute;
+  top: 2vh;
+  z-index: 10; */
+
+  width: clamp(200px, 30vw, 400px);
+
+  padding: 0.55rem 1.25rem;
+  border-radius: 999px;
+
+  background: rgba(82, 48, 21, 0.85);
+  backdrop-filter: blur(8px);
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  text-align: center;
+  font-family: "Merriweather", serif;
+  color: rgba(255, 255, 255, 0.719);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+main.book-wrapper{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  margin: 0.6rem;
+  padding: 6px;
+  
+
+  position: relative;
+
+  width: clamp(640px, 72vw, 1200px);
+  height: 86%;
+  aspect-ratio: 3 / 4;
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.45),
+    0 4px 10px rgba(0, 0, 0, 0.25);
+  border-radius: 2px;
+}
+
+

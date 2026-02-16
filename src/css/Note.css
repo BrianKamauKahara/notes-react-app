@@ -1,0 +1,54 @@
+.note {
+  display: block;
+
+  padding: 6px;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.082);
+
+  word-break: break-word;
+  break-inside: auto;
+  border-radius: 4px;
+
+  overflow: ellipsis;
+}
+
+.note::hover {
+  z-index: 11;
+}
+
+.note-title {
+  /* background-color: rgba(75, 75, 75, 0.062); */
+  border-radius: 4px;
+  padding: 0px 0px 4px 0px;
+
+  font-family: "Caveat Brush", cursive;
+  font-size: 1rem;
+  font-weight: 400;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02rem;
+}
+
+.note-content { 
+  margin-left: 3px;
+  font-family: "Comic Sans MS", "Comic Sans", cursive;
+  font-weight: lighter;
+  font-size: 0.7rem;
+  letter-spacing: 0.015rem;
+
+  display: inline;
+  text-align: justify;
+}
+
+.note-time {
+  font-style: italic;
+  font-size: 0.7rem;
+  margin: 2px 6px;
+}
+
+.note-time-updated {
+  display: block;
+  text-align: right;
+}
