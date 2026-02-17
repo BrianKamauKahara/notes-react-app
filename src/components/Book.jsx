@@ -1,17 +1,55 @@
-import { useLayoutEffect, useRef, useState, useEffect } from "react"
+import { useLayoutEffect, useRef, useState, useEffect, Fragment } from "react"
 import '../css/Book.css'
 import Note from "./Note"
 
-export default function Book({ notes }) {
+const getCurrentDayFrom = (timestamp) => {
+    const date = new Date(timestamp)
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+
+    return `${year}-${month}-${day}`
+}
+
+const getDayElFrom = (day) => {
+    const [y, m, d] = day.split('-')
+    const date = new Date(y, m - 1, d)
+
+    return <time
+        dateTime={date}
+        className="notes-day">
+        {date.toDateString()}
+    </time>
+}
+
+const convertNotesToObj = (rawNotes) => {
+    const notesObj = {}
+
+    rawNotes.forEach(note => {
+        const noteDay = getCurrentDayFrom(note.createdAt)
+
+        if (!notesObj[noteDay]) {
+            notesObj[noteDay] = []
+        }
+
+        notesObj[noteDay].push(note)
+    })
+
+    return notesObj
+}
+
+export default function Book({ notes: rawNotes }) {
     const bookRef = useRef(null)
     const buttonRefs = useRef([null, null])
-
 
     const [columnWidth, setColumnWidth] = useState(0)
     const [columnCount, setColumnCount] = useState(0)
 
     const [currentDisplayedColumns, setCurrentDisplayedColumns] = useState([1, 2])
     const [transformPx, setTransformPx] = useState(0)
+
+    const [notes, setNotes] = useState(() => convertNotesToObj(rawNotes))
 
     useLayoutEffect(() => {
         if (bookRef.current) {
@@ -48,13 +86,19 @@ export default function Book({ notes }) {
         }
     }
 
-    const pageEls = notes.map((note, i) =>
-        <Note
-            key={i}
-            {...note}
-        />
-    )
+    const pageEls = Object.keys(notes).sort((a, b) => b.localeCompare(a)).map((day) => {
+        const dayEl = getDayElFrom(day)
+        const noteEls = notes[day].map((note) =>
+            <Note
+                key={note.id}
+                {...note} />
+        )
 
+        return <Fragment key={day}>
+            {dayEl}
+            {noteEls}
+        </Fragment>
+    })
     return (
         <>
             <div className="book-container">

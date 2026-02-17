@@ -8,14 +8,13 @@ export default function Note(props) {
         date => new Date(date).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit',
             hour12: true, // 24-hour format; true for AM/PM
         }))
 
     return (
         <article className="note">
             <div className="note-heading">
-                <time className="note-time note-time-created" dateTime={createdAt.toISOString()}>- {formattedDates[0]}</time>
+                <time className="note-time note-time-created" dateTime={createdAt.toISOString()}>{formattedDates[0]}</time>
                 <h3 className="note-title">{props.title}</h3>
             </div>
             <p className="note-content">{props.content}</p>

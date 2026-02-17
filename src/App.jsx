@@ -4,14 +4,12 @@ import { fetchNotesBatch } from './api/notes';
 import './App.css'
 
 function randomTimePastTwoDays() {
-  const now = Date.now();
-  const twoDaysAgo = now - 2 * 24 * 60 * 60 * 1000; // 2 days in ms
-  const randomTimestamp = twoDaysAgo + Math.random() * (now - twoDaysAgo);
-  return new Date(randomTimestamp);
+  const now = Date.now()
+  const twoDaysAgo = now - 5 * 24 * 60 * 60 * 1000; // 2 days in ms
+  const randomTimestamp = twoDaysAgo + Math.random() * (now - twoDaysAgo)
+  return new Date(randomTimestamp)
 }
 
-// Example usage
-console.log(randomTimePastTwoDays());
 
 function computeNextBatchSize(max_length_allowed, currentLength, numNotesFetched) {
   const averageNoteLength = currentLength / numNotesFetched
@@ -54,9 +52,6 @@ function App() {
     setNextBatchSize(newBatchSize)
   }
 
-
-
-
   const notes = Array.from({ length: 24 }).fill(0).map((_, i) =>
   ({
     id: i,
@@ -64,7 +59,7 @@ function App() {
     createdAt: randomTimePastTwoDays(),
     updatedAt: randomTimePastTwoDays(), // placeholder, illogical
     content: "Today I became a and then they did Today I became a Becuase it wasnt worh then they did Today I became a and eventually that resulted in became a Becuase it wasnt worh then they did Today I became a became a Becuase it wasnt worh then they did Today I became a "
-  }))
+  })).sort((a, b) => a.createdAt - b.createdAt)
 
   return (
     <>
