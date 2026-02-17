@@ -26,15 +26,21 @@ const getDayElFrom = (day) => {
 const convertNotesToObj = (rawNotes) => {
     const notesObj = {}
 
-    rawNotes.forEach(note => {
-        const noteDay = getCurrentDayFrom(note.createdAt)
+    rawNotes
+        .map(note => ({
+            ...note,
+            createdAt: new Date(note.createdAt._seconds * 1000 + Math.floor(note.createdAt._nanoseconds / 1e6)),
+            updatedAt: new Date(note.updatedAt._seconds * 1000 + Math.floor(note.updatedAt._nanoseconds / 1e6)),
+        }))
+        .forEach(note => {
+            const noteDay = getCurrentDayFrom(note.createdAt)
 
-        if (!notesObj[noteDay]) {
-            notesObj[noteDay] = []
-        }
+            if (!notesObj[noteDay]) {
+                notesObj[noteDay] = []
+            }
 
-        notesObj[noteDay].push(note)
-    })
+            notesObj[noteDay].push(note)
+        })
 
     return notesObj
 }
@@ -49,7 +55,7 @@ export default function Book({ notes: rawNotes }) {
     const [currentDisplayedColumns, setCurrentDisplayedColumns] = useState([1, 2])
     const [transformPx, setTransformPx] = useState(0)
 
-    const [notes, setNotes] = useState(() => convertNotesToObj(rawNotes))
+    const [notes, setNotes] = useState(convertNotesToObj(rawNotes))
 
     useLayoutEffect(() => {
         if (bookRef.current) {
@@ -64,6 +70,10 @@ export default function Book({ notes: rawNotes }) {
             console.log(viewingWidth, columnCount)
         }
     }, [])
+
+    useEffect(() => {
+        setNotes(convertNotesToObj(rawNotes))
+    }, [rawNotes])
 
     const changeRed = (i) => {
         const el = buttonRefs.current[i]
@@ -94,10 +104,10 @@ export default function Book({ notes: rawNotes }) {
                 {...note} />
         )
 
-        return <Fragment key={day}>
+        return <div key={day} style={{ display: 'inline', backgroundColor: 'red' }}>
             {dayEl}
             {noteEls}
-        </Fragment>
+        </div>
     })
     return (
         <>
