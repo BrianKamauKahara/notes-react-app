@@ -1,8 +1,8 @@
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
   --note-padding: 0 1% 0 3%;
+  --title-font: "Caveat Brush", cursive;
+  --content-font: "Comic Sans MS", "Comic Sans", cursive;
+  --long-date-font: "Amatic SC", cursive;
 }
 
 .book-container {
@@ -17,8 +17,8 @@
     rgba(255, 255, 255, 0.801) 100%
   );
   box-shadow:
-  inset 0 18px 12px -12px rgba(0, 0, 0, 0.308),  
-  inset 0 -18px 12px -12px rgba(0, 0, 0, 0.308);
+    inset 0 18px 12px -12px rgba(0, 0, 0, 0.308),
+    inset 0 -18px 12px -12px rgba(0, 0, 0, 0.308);
 
   height: 100%;
   width: 96%;
@@ -30,6 +30,7 @@
   column-count: 2;
   column-rule: 1px solid rgba(173, 173, 173, 0.623);
   column-gap: 0px;
+  column-fill: auto;
 
   /* box-shadow:
     0 20px 40px rgba(49, 49, 49, 0.45),
@@ -43,7 +44,9 @@
 
   /* overflow: hidden; */
 }
-
+.book:hover {
+  cursor: pointer;
+}
 /* .book::before {
   content: "";
   position: absolute;

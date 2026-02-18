@@ -18,7 +18,7 @@ div#root {
   aspect-ratio: 3 / 4; */
 }
 
-header {
+header.main-header {
   /* position: absolute;
   top: 2vh;
   z-index: 10; */

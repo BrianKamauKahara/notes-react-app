@@ -14,12 +14,12 @@ export default function Note(props) {
     const hasBeenEdited = createdAt.getTime() !== updatedAt.getTime()
 
     return (
-        <article className="note">
+        <article className="note" onClick={props.select}>
             <div className="note-heading">
                 <time className="note-time note-time-created" dateTime={createdAt.toISOString()}>{formattedDates[0]}</time>
                 <h3 className="note-title">{props.title}</h3>
             </div>
-            <p className="note-content">{props.content}</p>
+            <section className="note-content">{props.content}</section>
             {hasBeenEdited && <time className="note-time note-time-updated" dateTime={updatedAt.toISOString()}>edit - {formattedDates[1]}</time>}
         </article>
     )

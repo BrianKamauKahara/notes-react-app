@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, useEffect, Fragment } from "react"
 import '../css/Book.css'
 import Note from "./Note"
+import NoteForm from "./NoteForm"
 
 const getCurrentDayFrom = (timestamp) => {
     const date = new Date(timestamp)
@@ -29,8 +30,8 @@ const convertNotesToObj = (rawNotes) => {
     rawNotes
         .map(note => ({
             ...note,
-            createdAt: new Date(note.createdAt._seconds * 1000 + Math.floor(note.createdAt._nanoseconds / 1e6)),
-            updatedAt: new Date(note.updatedAt._seconds * 1000 + Math.floor(note.updatedAt._nanoseconds / 1e6)),
+            createdAt: note.createdAt /* new Date(note.createdAt._seconds * 1000 + Math.floor(note.createdAt._nanoseconds / 1e6)) */,
+            updatedAt: note.updatedAt /* new Date(note.updatedAt._seconds * 1000 + Math.floor(note.updatedAt._nanoseconds / 1e6)) */,
         }))
         .forEach(note => {
             const noteDay = getCurrentDayFrom(note.createdAt)
@@ -56,6 +57,9 @@ export default function Book({ notes: rawNotes }) {
     const [transformPx, setTransformPx] = useState(0)
 
     const [notes, setNotes] = useState(convertNotesToObj(rawNotes))
+
+    const [formIsOpen, setFormIsOpen] = useState(false)
+    const [selectedNote, setSelectedNote] = useState(null) 
 
     useLayoutEffect(() => {
         if (bookRef.current) {
@@ -96,18 +100,26 @@ export default function Book({ notes: rawNotes }) {
         }
     }
 
+    const selectNote = (day, noteIndex) => {
+        console.log(day, noteIndex)
+
+        setSelectedNote(notes?.[day][noteIndex])
+        setFormIsOpen(true)
+    }
+
     const pageEls = Object.keys(notes).sort((a, b) => b.localeCompare(a)).map((day) => {
         const dayEl = getDayElFrom(day)
-        const noteEls = notes[day].map((note) =>
+        const noteEls = notes[day].map((note, i) =>
             <Note
                 key={note.id}
+                select={() => selectNote(day, i)}
                 {...note} />
         )
 
-        return <div key={day} style={{ display: 'inline', backgroundColor: 'red' }}>
+        return <Fragment key={day}>
             {dayEl}
             {noteEls}
-        </div>
+        </Fragment>
     })
     return (
         <>
@@ -122,12 +134,10 @@ export default function Book({ notes: rawNotes }) {
                 >
                     {pageEls}
                 </div>
-
-
-
-                {/* <div className="page-number">{currentDisplayedColumns[0]}</div>
-            <div className="page-number">{currentDisplayedColumns[1]}</div> */}
             </div>
+
+            {formIsOpen && <NoteForm note={selectedNote} />}
+
             <button
                 id="prev-page-btn"
                 ref={el => (buttonRefs.current[0] = el)}

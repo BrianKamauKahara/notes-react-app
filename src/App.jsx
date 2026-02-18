@@ -10,6 +10,29 @@ function randomTimePastTwoDays() {
   return new Date(randomTimestamp)
 }
 
+function generateRandomContent(minWords = 8, maxWords = 80) {
+  const WORDS = [
+    "grace", "light", "truth", "code", "logic",
+    "faith", "hope", "build", "create", "learn",
+    "think", "grow", "write", "peace", "order"
+  ];
+
+  if (minWords > maxWords) [minWords, maxWords] = [maxWords, minWords];
+
+  const wordCount =
+    Math.floor(Math.random() * (maxWords - minWords + 1)) + minWords;
+
+  let content = "";
+
+  for (let i = 0; i < wordCount; i++) {
+    const randomWord =
+      WORDS[Math.floor(Math.random() * WORDS.length)];
+    content += randomWord + (i < wordCount - 1 ? " " : "");
+  }
+
+  return content
+}
+
 function computeNextBatchSize(max_length_allowed, currentLengthOfFetchedNotes, numNotesFetched) {
   const averageNoteLength = currentLengthOfFetchedNotes / numNotesFetched
   const requiredNumNotes = Math.ceil((max_length_allowed - currentLengthOfFetchedNotes) / averageNoteLength)
@@ -25,14 +48,14 @@ function App() {
 
 
   
-  /* const notes = Array.from({ length: 24 }).fill(0).map((_, i) =>
+  const testNotes = Array.from({ length: 13 }).fill(0).map((_, i) =>
   ({
     id: i,
-    title: "A Real Heading but it happens to be a bit long so what you gonna do this gon make the news",
+    title: "Short Heading",
     createdAt: randomTimePastTwoDays(),
     updatedAt: randomTimePastTwoDays(), // placeholder, illogical
-    content: "Today I became a and then they did Today I became a Becuase it wasnt worh then they did Today I became a and eventually that resulted in became a Becuase it wasnt worh then they did Today I became a became a Becuase it wasnt worh then they did Today I became a "
-  })).sort((a, b) => a.createdAt - b.createdAt) */
+    content: generateRandomContent()
+  })).sort((a, b) => a.createdAt - b.createdAt)
 
   useEffect(() => {
     const fetchedNotes = []
@@ -60,10 +83,10 @@ function App() {
       return fetchNotesRecursively()
     }
     
-    fetchNotesRecursively()
+    /* fetchNotesRecursively()
       .then(fetchedNotes => setNotes(fetchedNotes))
       .catch(err => setError(err.message))
-      .finally(() => setLoading(false))
+      .finally(() => setLoading(false)) */
   }, [])
 
 
@@ -72,7 +95,7 @@ function App() {
     <>
       <header className='main-header'>Jot It Down...</header>
       <main className="book-wrapper">
-        <Book notes={notes} />
+        <Book notes={testNotes} />
       </main>
     </>
   )

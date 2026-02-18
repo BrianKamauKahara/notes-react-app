@@ -1,3 +1,7 @@
+* {
+  --default-transition: all 0.2s ease;
+}
+
 .note {
   display: block;
 
@@ -12,8 +16,9 @@
   overflow: ellipsis;
 }
 
-.note::hover {
-  z-index: 11;
+.note:hover {
+  cursor: pointer;
+  color: rgb(88, 40, 0);
 }
 
 .note-title {
@@ -21,7 +26,7 @@
   border-radius: 4px;
   padding: var(--note-padding);
 
-  font-family: "Caveat Brush", cursive;
+  font-family: var(--title-font);
   font-size: 1rem;
   font-weight: 400;
 
@@ -29,17 +34,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: 0.02rem;
+
+  transition: var(--default-transition);
+}
+.note-title:hover {
+  transform: scale(1.01);
 }
 
-.note-content { 
+.note-content {
   margin-left: 3px;
-  font-family: "Comic Sans MS", "Comic Sans", cursive;
+  font-family: var(--content-font);
   font-weight: lighter;
   font-size: 0.7rem;
   letter-spacing: 0.015rem;
 
   display: inline;
   text-align: justify;
+
+  transition: var(--default-transition);
+}
+
+.note-content:hover {
+  transform: translateX(6px);
 }
 
 .note-time {
@@ -53,17 +69,22 @@
   text-align: right;
 }
 
-.notes-day{
+.notes-day {
   padding: var(--note-padding);
   margin: 6px;
 
-  font-family: "Amatic SC", cursive;
+  font-family: var(--long-date-font);
   font-size: 0.8rem;
   font-weight: 500;
   color: #4a4a4a;
-  
+
   text-decoration: underline;
   font-style: italic;
   margin-bottom: 2px;
   display: inline-block;
+
+  transition: var(--default-transition);
+}
+.notes-day:hover {
+  transform: scale(1.04);
 }
