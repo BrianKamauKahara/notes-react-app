@@ -83,10 +83,10 @@ function App() {
       return fetchNotesRecursively()
     }
     
-    /* fetchNotesRecursively()
+    fetchNotesRecursively()
       .then(fetchedNotes => setNotes(fetchedNotes))
       .catch(err => setError(err.message))
-      .finally(() => setLoading(false)) */
+      .finally(() => setLoading(false))
   }, [])
 
 
@@ -95,7 +95,7 @@ function App() {
     <>
       <header className='main-header'>Jot It Down...</header>
       <main className="book-wrapper">
-        <Book notes={testNotes} />
+        <Book notes={notes} />
       </main>
     </>
   )

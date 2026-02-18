@@ -1,10 +1,3 @@
-* {
-  --note-padding: 0 1% 0 3%;
-  --title-font: "Caveat Brush", cursive;
-  --content-font: "Comic Sans MS", "Comic Sans", cursive;
-  --long-date-font: "Amatic SC", cursive;
-}
-
 .book-container {
   position: relative;
 

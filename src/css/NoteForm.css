@@ -25,6 +25,11 @@
     inset 0 12px 18px -10px rgba(0, 0, 0, 0.25),
     inset 0 -12px 18px -10px rgba(0, 0, 0, 0.25),
     0 12px 25px rgba(0, 0, 0, 0.25);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 .form-wrapper::before,
 .form-wrapper::after {
@@ -47,12 +52,18 @@
   bottom: -8px;
 }
 
-.form-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.close-form-btn {
+  width: 10%;
+  height: 12px;
+  background-color: rgba(128, 128, 128, 0.822);
+  border: 5px outset rgba(0, 0, 0, 0.205);
+  border-radius: 10%;
+}
+.close-form-btn:hover {
+  cursor: pointer;
+}
 
+.form-container {
   width: 60%;
   max-height: 80%;
   aspect-ratio: 9 / 16;
@@ -144,12 +155,24 @@
   width: 68px;
   border-radius: 4px;
 
-  border: 1px solid var(--def-border-color);
+  border: 3px outset var(--def-border-color);
 }
 
-.save-form-btn {
+.feedback-display {
+  color: rgb(144, 182, 101);
+  text-align: center;
+  font-family: var(--content-font);
+  margin-top: 6px;
+}
+div .feedback-display-error {
+  color: rgb(197, 103, 66);
+}
+
+.save-note-btn {
+  background-color: rgba(182, 150, 101, 0.473);
 }
 
 .delete-note-btn {
   margin-left: auto;
+  background-color: rgba(126, 158, 51, 0.37);
 }

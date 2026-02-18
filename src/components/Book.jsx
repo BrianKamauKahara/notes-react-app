@@ -27,13 +27,7 @@ const getDayElFrom = (day) => {
 const convertNotesToObj = (rawNotes) => {
     const notesObj = {}
 
-    rawNotes
-        .map(note => ({
-            ...note,
-            createdAt: note.createdAt /* new Date(note.createdAt._seconds * 1000 + Math.floor(note.createdAt._nanoseconds / 1e6)) */,
-            updatedAt: note.updatedAt /* new Date(note.updatedAt._seconds * 1000 + Math.floor(note.updatedAt._nanoseconds / 1e6)) */,
-        }))
-        .forEach(note => {
+    rawNotes.forEach(note => {
             const noteDay = getCurrentDayFrom(note.createdAt)
 
             if (!notesObj[noteDay]) {
@@ -136,7 +130,12 @@ export default function Book({ notes: rawNotes }) {
                 </div>
             </div>
 
-            {formIsOpen && <NoteForm note={selectedNote} />}
+            {formIsOpen && <div className="form-wrapper">
+                <button className="close-form-btn" type="button" onClick={() => setFormIsOpen(!formIsOpen)}>
+                
+                </button>
+                <NoteForm note={selectedNote} />
+                </div>}
 
             <button
                 id="prev-page-btn"

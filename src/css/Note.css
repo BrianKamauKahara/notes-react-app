@@ -1,4 +1,8 @@
 * {
+  --note-padding: 0 1% 0 3%;
+  --title-font: "Caveat Brush", cursive;
+  --content-font: "Comic Sans MS", "Comic Sans", cursive;
+  --long-date-font: "Amatic SC", cursive;
   --default-transition: all 0.2s ease;
 }
 
@@ -14,6 +18,7 @@
   border-radius: 4px;
 
   overflow: ellipsis;
+  margin-bottom: 12px;
 }
 
 .note:hover {
@@ -24,7 +29,7 @@
 .note-title {
   /* background-color: rgba(75, 75, 75, 0.062); */
   border-radius: 4px;
-  padding: var(--note-padding);
+  padding: 0 0 6px;
 
   font-family: var(--title-font);
   font-size: 1rem;
