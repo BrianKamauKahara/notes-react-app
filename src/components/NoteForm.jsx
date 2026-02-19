@@ -2,11 +2,21 @@ import { useEffect, useState } from "react";
 import "../css/NoteForm.css";
 import { requestSpecificNote, requestNoteUpdate, requestNoteDeletion, requestCreateNote } from "../api/notes"
 
-const modifyNote = (rawNote) => {
+const getCurrentDayFrom = (timestamp) => {
+    const date = new Date(timestamp);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};
+
+const modifyNoteForDisplay = (rawNote) => {
     const rawDates = [rawNote.createdAt, rawNote.updatedAt];
-    const [createdAt, updatedAt] = rawDates.map((rawDate) => {
-        const date = new Date(rawDate);
-        const day = `${date.getFullYear()} ${date.getMonth() + 1} ${date.getDate()}`;
+    const [createdAt, updatedAt] = rawDates.map((timestamp) => {
+        const date = new Date(timestamp);
+        const day = getCurrentDayFrom(timestamp);
         const time = date.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -53,9 +63,9 @@ const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
     }
 }
 
-export default function NoteForm({ note: rawNote, mode }) {
+export default function NoteForm({ note: rawNote, mode, onChanges: setOnChanges, asLoading:setAsLoading }) {
     const [formMode, setFormMode] = useState(mode);
-    const [note, setNote] = useState(() => (formMode === 'create' ? null : modifyNote(rawNote)))
+    const [note, setNote] = useState(formMode === 'create' ? null : modifyNoteForDisplay(rawNote))
     const [isModifying, setIsModifying] = useState(formMode === 'create');
     const [formData, setFormData] = useState({
         title: note?.title || "",
@@ -91,23 +101,31 @@ export default function NoteForm({ note: rawNote, mode }) {
 
         try {
             setIsLoading(true)
+            setAsLoading(prev => ({...prev, isLoading: true}))
             let result
             if (formMode === 'create') {
                 result = await requestCreateNote(formData)
-                setFormMode('update')
                 setFeedback("Created Note Succesfully")
             } else {
                 result = await requestNoteUpdate(note.id, formData)
                 setFeedback("Updated Note Succesfully")
             }
             const newNote = await requestSpecificNote(result.id)
-            setNote(modifyNote(newNote))
+            setNote(modifyNoteForDisplay(newNote))
             setIsModifying(false)
+            setOnChanges(prev => ({
+                ...prev,
+                newChanges: {
+                noteDay: getCurrentDayFrom(newNote.createdAt),
+                noteIndex: formMode === 'update' ? newNote.id : null,
+                newNote}}))
+            if (isError) setIsError(false)
         } catch (err) {
             setFeedback("An Error has Occured")
             setIsError(true)
         } finally {
             setIsLoading(false)
+            setAsLoading(prev => ({...prev, isLoading:false}))
         }
     }
 

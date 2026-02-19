@@ -89,8 +89,6 @@ function App() {
       .finally(() => setLoading(false))
   }, [])
 
-
-  console.log(notes)
   return (
     <>
       <header className='main-header'>Jot It Down...</header>

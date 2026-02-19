@@ -53,9 +53,13 @@ export default function Book({ notes: rawNotes }) {
   ]);
   const [transformPx, setTransformPx] = useState(0);
 
-  const [notes, setNotes] = useState(convertNotesToObj(rawNotes));
-
-  const [formState, setFormState] = useState({ isOpen: false, mode: "update" });
+  const [notes, setNotes] = useState(() => convertNotesToObj(rawNotes));
+  const [formState, setFormState] = useState({
+    isOpen: false,
+    isLoading: false,
+    mode: "update",
+    newChanges: {},
+  });
   const [selectedNote, setSelectedNote] = useState(null);
 
   useLayoutEffect(() => {
@@ -70,7 +74,7 @@ export default function Book({ notes: rawNotes }) {
 
       console.log(viewingWidth, columnCount);
     }
-  }, []);
+  }, [notes]);
 
   useEffect(() => {
     setNotes(convertNotesToObj(rawNotes));
@@ -100,10 +104,53 @@ export default function Book({ notes: rawNotes }) {
   };
 
   const selectNote = (day, noteIndex) => {
-    setSelectedNote(notes?.[day][noteIndex]);
-    setFormState({ isOpen: true, mode: "update" });
+    setSelectedNote(notes[day][noteIndex]);
+    setFormState((prev) => ({ ...prev, isOpen: true, mode: "update" }));
   };
 
+  const modifyNote = (mode, { noteDay, noteIndex, newNote } = {}) => {
+    console.log('Modifying stored note')
+    console.log(mode, noteDay, noteIndex, newNote);
+    if (mode === "create") {
+      const newNoteDay = getCurrentDayFrom(newNote.createdAt);
+
+      setNotes((prevNotes) => {
+        const updatedDayNotes = prevNotes[newNoteDay]
+          ? [newNote, ...prevNotes[newNoteDay]]
+          : [newNote];
+
+        return {
+          ...prevNotes,
+          [newNoteDay]: updatedDayNotes,
+        };
+      });
+    } else if (mode === "update") {
+      setNotes((prevNotes) => {
+        console.log(prevNotes)
+
+        return ({
+        ...prevNotes,
+        [noteDay]: prevNotes[noteDay].map((note, i) =>
+          i === noteIndex ? newNote : note,
+        ),
+      })});
+    } else if (mode === "delete") {
+      setNotes((prevNotes) => {
+        const { [noteDay]: dayNotes, ...rest } = prevNotes;
+
+        if (dayNotes.length === 1) {
+          return rest;
+        } else {
+          return {
+            ...rest,
+            [noteDay]: dayNotes.filter((_, i) => i !== noteIndex),
+          };
+        }
+      });
+    }
+  };
+
+  console.log(notes)
   const pageEls = Object.keys(notes)
     .sort((a, b) => b.localeCompare(a))
     .map((day) => {
@@ -111,7 +158,7 @@ export default function Book({ notes: rawNotes }) {
       const noteEls = notes[day].map((note, i) => (
         <Note key={note.id} select={() => selectNote(day, i)} {...note} />
       ));
-
+      console.log(noteEls)
       return (
         <Fragment key={day}>
           {dayEl}
@@ -119,13 +166,14 @@ export default function Book({ notes: rawNotes }) {
         </Fragment>
       );
     });
+
   return (
     <>
       <button
         className="new-note-btn"
         onClick={() => {
-          setFormState((prev) => ({ ...prev, isOpen: true, mode: "create" }))}
-        }
+          setFormState((prev) => ({ ...prev, isOpen: true, mode: "create" }));
+        }}
         disabled={formState.isOpen}
       >
         <CreateNoteIcon />
@@ -148,9 +196,24 @@ export default function Book({ notes: rawNotes }) {
           <button
             className="close-form-btn"
             type="button"
-            onClick={() => setFormState((prev) => ({ ...prev, isOpen: false }))}
+            onClick={() => {
+                console.log(formState.mode, formState.isLoading)
+                if (formState.isLoading) {
+                console.log('you!')
+                return //temporary
+                }
+              if (Object.keys(formState.newChanges).length !== 0) {
+                modifyNote(formState.mode, formState.newChanges);
+              } 
+              setFormState((prev) => ({ ...prev, isOpen: false }));
+            }}
           ></button>
-          <NoteForm note={selectedNote} mode={formState.mode} />
+          <NoteForm
+            note={selectedNote}
+            mode={formState.mode}
+            onChanges={setFormState}
+            asLoading={setFormState}
+          />
         </div>
       )}
       <button
