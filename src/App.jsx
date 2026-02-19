@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Book from './components/Book'
 import { fetchNotesBatch } from './api/notes';
 import './App.css'

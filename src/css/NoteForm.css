@@ -1,7 +1,6 @@
 * {
   --def-border-radius: 6px;
   --form-content-padding: 6px;
-  --def-border-color: rgba(0, 0, 0, 0.15);
 }
 
 .form-wrapper {

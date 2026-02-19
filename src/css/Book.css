@@ -1,3 +1,8 @@
+* {
+  --def-border-color: rgba(0, 0, 0, 0.15);
+  --new-note-btn-col: rgba(173, 173, 173, 0.527);
+}
+
 .book-container {
   position: relative;
 
@@ -34,23 +39,86 @@
   height: 100%;
 
   padding: 1% 0;
-
-  /* overflow: hidden; */
 }
 .book:hover {
   cursor: pointer;
 }
-/* .book::before {
-  content: "";
+.new-note-btn {
   position: absolute;
-  top: 2%;
-  left: 50%;
-  width: 1px;
-  height: 96%;
-  background-color: #000;
-  transform: translateX(-50%);
-  z-index: 1;
-} */
+  top: 0;
+  right: 0;
+  transform: translate(110%, 8px);
+
+  width: 44px;
+  height: 44px;
+  padding: 0;
+
+  background-color: var(--new-note-btn-col);
+  color: var(--new-note-btn-col);
+
+  border: none;
+  border-radius: 6px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.new-note-btn svg {
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  transition: var(--default-transition);
+  border-radius: inherit;
+
+  box-shadow: 2px 2px 4px 2px rgba(255, 255, 255, 0.568);
+}
+
+.new-note-btn:hover {
+  transform: translate(110%, 8px) scale(1.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.new-note-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.new-note-btn:focus-visible {
+  outline: 3px solid var(--def-border-color);
+  outline-offset: 2px;
+}
+
+/* Tooltip */
+.new-note-btn::after {
+  content: "Add new note";
+  position: absolute;
+  top: 0%;
+  right: 0%;
+  transform: translate(100%, -60%);
+
+  background: inherit;
+  color: white;
+  font-size: 0.75rem;
+
+  padding: 4px 8px;
+  border-radius: 6px;
+
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.new-note-btn:hover::after {
+  opacity: 1;
+}
 
 .page-switch-btn {
   position: absolute;

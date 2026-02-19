@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "../css/NoteForm.css";
-import {requestSpecificNote, requestNoteUpdate, requestNoteDeletion, requestCreateNote} from "../api/notes"
+import { requestSpecificNote, requestNoteUpdate, requestNoteDeletion, requestCreateNote } from "../api/notes"
 
 const modifyNote = (rawNote) => {
     const rawDates = [rawNote.createdAt, rawNote.updatedAt];
@@ -40,7 +40,7 @@ const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
     }
 
     if (mode !== 'create') {
-        if (oldTitle === newTitle && oldContent === newContent)  {
+        if (oldTitle === newTitle && oldContent === newContent) {
             return {
                 isValid: false,
                 reason: `Old Note cannot be the same as the new note`
@@ -53,24 +53,24 @@ const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
     }
 }
 
-export default function NoteForm({ note: rawNote, create }) {
-    const [isModifying, setIsModifying] = useState(false);
-    const [isCreating, setIsCreating] = useState(create);
-    const [note, setNote] = useState(isCreating ? null : modifyNote(rawNote));
+export default function NoteForm({ note: rawNote, mode }) {
+    const [formMode, setFormMode] = useState(mode);
+    const [note, setNote] = useState(() => (formMode === 'create' ? null : modifyNote(rawNote)))
+    const [isModifying, setIsModifying] = useState(formMode === 'create');
     const [formData, setFormData] = useState({
         title: note?.title || "",
         content: note?.content || ""
     })
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const [isError, setIsError] = useState(false)
     const [feedBack, setFeedback] = useState(null)
 
 
     const handleChange = (e) => {
-        const {name, value} = e.target
+        const { name, value } = e.target
         setFormData(prev => ({
             ...prev,
-            [name] : value
+            [name]: value
         }))
     }
 
@@ -82,30 +82,32 @@ export default function NoteForm({ note: rawNote, create }) {
             oldContent: note?.content,
             newTitle: formData.title,
             newContent: formData.content,
-            mode: isCreating ? 'create' : 'update'
+            mode: formMode
         })
 
         if (!result.isValid) {
             return displayInvalidMessage(result.reason)
         }
-    
+
         try {
+            setIsLoading(true)
             let result
-            if (isCreating) {
+            if (formMode === 'create') {
                 result = await requestCreateNote(formData)
-                setIsCreating(false)
+                setFormMode('update')
                 setFeedback("Created Note Succesfully")
             } else {
                 result = await requestNoteUpdate(note.id, formData)
                 setFeedback("Updated Note Succesfully")
             }
             const newNote = await requestSpecificNote(result.id)
-            console.log(rawNote, newNote)
             setNote(modifyNote(newNote))
             setIsModifying(false)
         } catch (err) {
             setFeedback("An Error has Occured")
             setIsError(true)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -114,31 +116,44 @@ export default function NoteForm({ note: rawNote, create }) {
         setFeedback(reason)
     }
 
+    function renderHeader() {
+        if (formMode === "create") return "New Note";
+
+        if (formMode === "update" && !isLoading) {
+            return (
+                <div className="form-times-wrapper">
+                    <time
+                        className="form-note-time form-note-time-created"
+                        dateTime={note.createdAt.date.toISOString()}
+                    >
+                        {note.createdAt.string}
+                    </time>
+                    {note.hasBeenEdited && (
+                        <time
+                            className="form-note-time form-note-time-updated"
+                            dateTime={note.updatedAt.date.toISOString()}
+                        >
+                            last edited -{" "}
+                            {note.editedInSameDay ? note.updatedAt.time : note.updatedAt.string}
+                        </time>
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <div>
+                <div className="spinner"></div>
+                <span>{formMode === 'create' ? 'Creating note...' : 'Updating note...'}</span>
+            </div>
+        )
+    }
+
     return (
         <div className="form-container">
             <form action="" onSubmit={handleSubmit} className="note-form">
                 <header className="form-note-heading">
-                    {isCreating ? (
-                        "New Note"
-                    ) : (
-                        <div className="form-times-wrapper">
-                            <time
-                                className="form-note-time form-note-time-created"
-                                dateTime={note.createdAt.date.toISOString()}
-                            >
-                                {note.createdAt.string}
-                            </time>
-                            {note.hasBeenEdited && (
-                                <time
-                                    className="form-note-time form-note-time-updated"
-                                    dateTime={note.updatedAt.date.toISOString()}
-                                >
-                                    last edited -{" "}
-                                    {note.editedInSameDay ? note.updatedAt.time : note.updatedAt.string}
-                                </time>
-                            )}
-                        </div>
-                    )}
+                    {renderHeader()}
                 </header>
 
                 <label htmlFor="note-title" className="form-note-title">
@@ -150,6 +165,7 @@ export default function NoteForm({ note: rawNote, create }) {
                         value={formData.title}
                         onChange={handleChange}
                         readOnly={!isModifying}
+                        autoFocus={mode ==='create'}
                     />
                 </label>
 

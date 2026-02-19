@@ -2,6 +2,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  --header-color: rgba(82, 48, 21, 0.85);
 }
 
 div#root {
@@ -28,7 +29,7 @@ header.main-header {
   padding: 0.55rem 1.25rem;
   border-radius: 999px;
 
-  background: rgba(82, 48, 21, 0.85);
+  background: var(--header-color);
   backdrop-filter: blur(8px);
 
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -40,14 +41,13 @@ header.main-header {
   letter-spacing: 0.04em;
 }
 
-main.book-wrapper{
+main.book-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
 
   margin: 0.6rem;
   padding: 6px;
-  
 
   position: relative;
 
@@ -60,5 +60,3 @@ main.book-wrapper{
     0 4px 10px rgba(0, 0, 0, 0.25);
   border-radius: 2px;
 }
-
-
