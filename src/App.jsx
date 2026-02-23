@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Book from './components/Book'
-import { fetchNotesBatch } from './api/notes';
+import { fetchNotesBatch, requestCreateNote, requestNoteUpdate, requestSpecificNote, requestNoteDeletion } from './api/notes';
 import './App.css'
 
 function randomTimePastTwoDays() {
@@ -40,24 +40,74 @@ function computeNextBatchSize(max_length_allowed, currentLengthOfFetchedNotes, n
   return requiredNumNotes
 }
 
+const convertNotesToObj = (noteArray) => {
+    const notesObj = {}
+    noteArray.forEach(note => {
+      notesObj[note.id] = note
+    })
+  
+    return notesObj
+}
+
 function App() {
   const MAX_ESTIMATED_LENGTH = 2500
-  const [notes, setNotes] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [notes, setNotes] = useState({})
   const [error, setError] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
 
+  async function createNote(noteDetails) {
+    try {
+      const newNote = await requestCreateNote(noteDetails)
+      setNotes(prev => {
+        return {
+          [newNote.id] : newNote,
+          ...prev
+      }})
+      return newNote
+    } catch (err) {
+      console.error(err)
+      throw err
+    }
+  }
 
-  
-  const testNotes = Array.from({ length: 13 }).fill(0).map((_, i) =>
-  ({
-    id: i,
-    title: "Short Heading",
-    createdAt: randomTimePastTwoDays(),
-    updatedAt: randomTimePastTwoDays(), // placeholder, illogical
-    content: generateRandomContent()
-  })).sort((a, b) => a.createdAt - b.createdAt)
+  async function updateNote(noteId, newDetails) {
+    try {
+      const newNote = await requestNoteUpdate(noteId, newDetails)
+      setNotes(prev => ({
+        ...prev,
+        [noteId] : newNote
+      }))
+    } catch (err) {
+      console.error(err)
+      throw err
+    }
+  }
+
+  async function deleteNote(noteId) {
+    if (window.confirm("Are you sure you want to delete this note?")) {
+      try {
+        await requestNoteDeletion(noteId)
+        setNotes(prev => {
+          const {[noteId]: _, ...rest} = prev
+          return rest
+        })
+        
+        return true
+      } catch (err) {
+        console.error(err)
+        throw err
+      }
+    } else {
+      return false
+    }
+  }
+
+  function selectNote(noteId) {
+    return notes[noteId]
+  }
 
   useEffect(() => {
+    setIsLoading(true)
     const fetchedNotes = []
     let totalFetchedLength = 0
     let nextBatchSize = 2
@@ -83,18 +133,45 @@ function App() {
       return fetchNotesRecursively()
     }
     
-    fetchNotesRecursively()
-      .then(fetchedNotes => setNotes(fetchedNotes))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false))
+    fetchNotesRecursively() // Fetch a complete batch of notes
+      .then(fetchedNotes => setNotes(prev => ({
+        ...prev,
+        ...convertNotesToObj(fetchedNotes)
+      })))
+      .catch(err => {
+        console.error(err)
+        setError(err.message)})
+      .finally(() => setIsLoading(false))
   }, [])
 
   return (
     <>
-      <header className='main-header'>Jot It Down...</header>
-      <main className="book-wrapper">
-        <Book notes={notes} />
-      </main>
+      {!error ? 
+      <>
+        <header className='main-header'>Jot It Down...</header>
+        <main className="book-wrapper">
+          {isLoading ? 
+            <div className="book-loading">Loading Your Notes...</div> :
+            <Book notes={notes} selectNote={selectNote} createNote={createNote} updateNote={updateNote} deleteNote={deleteNote}/>}
+
+        </main> 
+      </> :
+      <main className='error-wrapper'>
+          <div className='error-container'>
+            <h3>An Error has Occured :{'('}</h3>
+            <hr /><br />
+            <p>
+                <strong>Message:</strong>{' '}
+                {error.message || String(error)}
+            </p>
+
+            {error.stack && (
+                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                    {error.stack}
+                </pre>
+            )}
+        </div>
+      </main>}
     </>
   )
 }

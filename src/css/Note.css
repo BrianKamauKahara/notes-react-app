@@ -1,11 +1,3 @@
-* {
-  --note-padding: 0 1% 0 3%;
-  --title-font: "Caveat Brush", cursive;
-  --content-font: "Comic Sans MS", "Comic Sans", cursive;
-  --long-date-font: "Amatic SC", cursive;
-  --default-transition: all 0.2s ease;
-}
-
 .note {
   display: block;
 
@@ -21,8 +13,11 @@
   margin-bottom: 12px;
 }
 
+.note-heading {
+  position: relative;
+}
+
 .note:hover {
-  cursor: pointer;
   color: rgb(88, 40, 0);
 }
 
@@ -43,6 +38,7 @@
   transition: var(--default-transition);
 }
 .note-title:hover {
+  cursor: pointer;
   transform: scale(1.01);
 }
 
@@ -92,4 +88,23 @@
 }
 .notes-day:hover {
   transform: scale(1.04);
+}
+
+.note .delete-note-btn {
+  z-index: 10;
+  all: unset;
+  display: none;
+  cursor: pointer;
+
+  position: absolute;
+  top: 0;
+  right: 6px;
+
+  width: 24px;
+  height: 24px;
+}
+.note:hover .delete-note-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

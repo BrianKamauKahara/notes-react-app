@@ -2,6 +2,20 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+
+  --header-color: rgba(82, 48, 21, 0.85);
+
+  --note-padding: 0 1% 0 3%;
+  --title-font: "Caveat Brush", cursive;
+  --content-font: "Comic Sans MS", "Comic Sans", cursive;
+  --long-date-font: "Amatic SC", cursive;
+  --default-transition: all 0.2s ease;
+
+  --def-border-color: rgba(0, 0, 0, 0.15);
+  --new-note-btn-col: rgba(173, 173, 173, 0.527);
+
+  --def-border-radius: 6px;
+  --form-content-padding: 6px;
 }
 
 body {
@@ -21,6 +35,8 @@ body {
   );
   background-size: 600% 600%;
   animation: duskDrift 30s ease-in-out infinite;
+
+  position: relative;
 }
 
 @keyframes duskDrift {

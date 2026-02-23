@@ -1,8 +1,3 @@
-* {
-  --def-border-radius: 6px;
-  --form-content-padding: 6px;
-}
-
 .form-wrapper {
   position: absolute;
   inset: 0;
@@ -52,6 +47,10 @@
 }
 
 .close-form-btn {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 10%;
   height: 12px;
   background-color: rgba(128, 128, 128, 0.822);

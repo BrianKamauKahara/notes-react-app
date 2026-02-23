@@ -1,10 +1,27 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-const formatNotes = (notes) => notes.map(note => ({
-  ...note,
-  createdAt: new Date(note.createdAt._seconds * 1000 + Math.floor(note.createdAt._nanoseconds / 1e6)),
-  updatedAt: new Date(note.updatedAt._seconds * 1000 + Math.floor(note.updatedAt._nanoseconds / 1e6)),
-}))
+const normalizeNote = (note) => {
+  return {
+    ...note,
+    createdAt: normalizeDate(note.createdAt),
+    updatedAt: normalizeDate(note.updatedAt)
+  }
+}
+
+const normalizeDate = (rawDateObj) => {
+  if (!rawDateObj) return null
+
+  if (rawDateObj instanceof Date) return rawDateObj
+
+  if (rawDateObj._seconds !== undefined) {
+    return new Date(
+      rawDateObj._seconds * 1000 +
+      Math.floor(rawDateObj._nanoseconds / 1e6)
+    )
+  }
+
+  return new Date(rawDateObj)
+}
 
 async function fetchNotesBatch({ start = null, limit = 2 }) {
   const query = start ? `startDocId=${start}&limit=${limit}` : `limit=${limit}`
@@ -14,7 +31,8 @@ async function fetchNotesBatch({ start = null, limit = 2 }) {
 
     if (!response.ok) throw new Error("Failed to fetch notes")
 
-    return formatNotes(await response.json())
+    const rawNotes = await response.json()
+    return rawNotes.map(note => normalizeNote(note))
   } catch (error) {
     console.error("Error fetching notes:", error);
     throw error
@@ -36,7 +54,7 @@ async function requestCreateNote(noteDetails) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    return await response.json()
+    return normalizeNote(await response.json())
   } catch (error) {
     console.error('Failed to update note:', error);
     throw error
@@ -59,7 +77,9 @@ async function requestNoteUpdate(noteId, noteDetails) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    return await response.json()
+    const updatedNote = await response.json()
+
+    return normalizeNote(updatedNote)
   } catch (error) {
     console.error('Failed to update note:', error);
     throw error
@@ -74,13 +94,9 @@ async function requestSpecificNote(noteId) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const note = await response.json()
+    const rawNote = await response.json()
 
-    return ({
-      ...note,
-      createdAt: new Date(note.createdAt._seconds * 1000 + Math.floor(note.createdAt._nanoseconds / 1e6)),
-      updatedAt: new Date(note.updatedAt._seconds * 1000 + Math.floor(note.updatedAt._nanoseconds / 1e6)),
-    })
+    return normalizeNote(rawNote)
   } catch (error) {
     console.error('Failed to fetch note:', error);
     throw error

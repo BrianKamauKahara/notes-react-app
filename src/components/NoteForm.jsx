@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useReducer, useState } from "react";
 import "../css/NoteForm.css";
 import { requestSpecificNote, requestNoteUpdate, requestNoteDeletion, requestCreateNote } from "../api/notes"
 
@@ -10,37 +10,16 @@ const getCurrentDayFrom = (timestamp) => {
     const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
-};
+}
 
-const modifyNoteForDisplay = (rawNote) => {
-    const rawDates = [rawNote.createdAt, rawNote.updatedAt];
-    const [createdAt, updatedAt] = rawDates.map((timestamp) => {
-        const date = new Date(timestamp);
-        const day = getCurrentDayFrom(timestamp);
-        const time = date.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-        });
+function isSameDay(date1, date2) {
+  if (!date1 || !date2) return false
 
-        return {
-            date,
-            day,
-            time,
-            string: `${date.toDateString()}, ${time}`,
-        };
-    });
-
-    const hasBeenEdited = createdAt.date.getTime() !== updatedAt.date.getTime();
-    const editedInSameDay = hasBeenEdited && createdAt.day === updatedAt.day;
-
-    return {
-        ...rawNote,
-        createdAt,
-        updatedAt,
-        hasBeenEdited,
-        editedInSameDay
-    }
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  )
 }
 
 const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
@@ -63,18 +42,20 @@ const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
     }
 }
 
-export default function NoteForm({ note: rawNote, mode, onChanges: setOnChanges, asLoading:setAsLoading }) {
-    const [formMode, setFormMode] = useState(mode);
-    const [note, setNote] = useState(formMode === 'create' ? null : modifyNoteForDisplay(rawNote))
-    const [isModifying, setIsModifying] = useState(formMode === 'create');
-    const [formData, setFormData] = useState({
-        title: note?.title || "",
-        content: note?.content || ""
-    })
-    const [isLoading, setIsLoading] = useState(false)
-    const [isError, setIsError] = useState(false)
-    const [feedBack, setFeedback] = useState(null)
+const initialFormState = {
+    modifying: true,
+    feedBack: "",
+    loading: false,
+    error: null,
+    currentAction: null
+}
 
+export default function NoteForm(props) {
+    // Form Controlled
+    const [formData, setFormData] = useState({
+        title: props.note?.title || "",
+        content: props.note?.content || ""
+    })
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -84,15 +65,49 @@ export default function NoteForm({ note: rawNote, mode, onChanges: setOnChanges,
         }))
     }
 
+    const clearFormContents = () => {
+        setFormData({ title: "", content: ""})
+    }
+
+    // Form State Handling
+    const [state, dispatch] = useReducer(reducer, initialFormState)
+
+    function reducer(state, action) {
+        switch (action.type) {
+            case "TOGGLE_MODIFICATION": 
+                return state.loading
+        ? state
+        : { ...state, modifying: !state.modifying }
+            case "FORM_START_LOADING":
+                return { ...state, loading: true, error: null, modifying: false, currentAction: action.payload }
+
+            case "CREATED_NOTE_SUCCESFULLY":
+                return { ...state, feedBack: 'Created Note Succesfully', error: null }
+
+            case "UPDATED_NOTE_SUCCESFULLY":
+                return { ...state, feedBack: 'Updated Note Succesfully', error: null }
+
+            case "DELETED_NOTE_SUCCESFULLY":
+                return { ...state, feedBack: 'Deleted Note Succsesfully', error: null }
+
+            case "FORM_STOP_LOADING":
+                return { ...state, currentAction: null, loading: false, modifying: true }
+
+            case "OBTAINED_ERROR":
+                console.log(action.payload?.error)
+                return { ...state, error: action.payload.error || true, feedBack: action.payload.feedBack || 'An Error Has Occured' }
+        }
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
 
         const result = validateNote({
-            oldTitle: note?.title,
-            oldContent: note?.content,
+            oldTitle: props.note?.title,
+            oldContent: props.note?.content,
             newTitle: formData.title,
             newContent: formData.content,
-            mode: formMode
+            mode: props.mode
         })
 
         if (!result.isValid) {
@@ -100,120 +115,192 @@ export default function NoteForm({ note: rawNote, mode, onChanges: setOnChanges,
         }
 
         try {
-            setIsLoading(true)
-            setAsLoading(prev => ({...prev, isLoading: true}))
+            dispatch({
+                type: "FORM_START_LOADING",
+                payload: 'create'
+            })
+
             let result
-            if (formMode === 'create') {
-                result = await requestCreateNote(formData)
-                setFeedback("Created Note Succesfully")
+            if (props.mode === 'create') {
+                const newNote = await props.createNote(formData)
+                props.selectNote(newNote.id)
+                dispatch({
+                    type: 'CREATED_NOTE_SUCCESFULLY',
+                })
+
             } else {
-                result = await requestNoteUpdate(note.id, formData)
-                setFeedback("Updated Note Succesfully")
+                await props.updateNote(props.note.id, formData)
+                dispatch({
+                    type: 'UPDATED_NOTE_SUCCESFULLY',
+                })
             }
-            const newNote = await requestSpecificNote(result.id)
-            setNote(modifyNoteForDisplay(newNote))
-            setIsModifying(false)
-            setOnChanges(prev => ({
-                ...prev,
-                newChanges: {
-                noteDay: getCurrentDayFrom(newNote.createdAt),
-                noteIndex: formMode === 'update' ? newNote.id : null,
-                newNote}}))
-            if (isError) setIsError(false)
+
         } catch (err) {
-            setFeedback("An Error has Occured")
-            setIsError(true)
+            dispatch({
+                type: 'OBTAINED_ERROR',
+                payload: { error: err }
+            })
         } finally {
-            setIsLoading(false)
-            setAsLoading(prev => ({...prev, isLoading:false}))
+            dispatch({
+                type: 'FORM_STOP_LOADING'
+            })
+        }
+    }
+
+    const handleDelete = async () => {
+        if (props.note) {
+            try {
+                dispatch({ 
+                    type: "FORM_START_LOADING",
+                    payload: 'delete'
+                 })
+                const deleted = await props.deleteNote(props.note.id)
+                if (deleted) {
+                    dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })    
+                    clearFormContents()
+                }
+            } catch (error) {
+                dispatch({ type: "OBTAINED_ERROR", payload: {error}})
+            } finally {
+                dispatch({ type: "FORM_STOP_LOADING"})
+            }
+        } else {
+            clearFormContents()
         }
     }
 
     const displayInvalidMessage = (reason) => {
-        setIsError(true)
-        setFeedback(reason)
+        dispatch({
+            type: 'OBTAINED_ERROR',
+            payload: { feedBack: reason }
+        })
     }
 
+    const toggleModification = (state) => {
+        dispatch({type: "TOGGLE_MODIFICATION", payload: state})
+    }
+    
     function renderHeader() {
-        if (formMode === "create") return "New Note";
+        const note = props.note
+        const mode = props.mode
+        const currentAction = state.currentAction
 
-        if (formMode === "update" && !isLoading) {
+        if (state.loading) {
+
+            const loadingMessage = {
+                create: 'Creating note...',
+                update: 'Updating note...',
+                delete: 'Deleting note...'
+            }[currentAction]
+
+            return (
+                <>
+                    <div className="spinner"></div>
+                    <span>{loadingMessage}</span>
+                </>
+            )
+        }
+
+        if (mode === 'create') {
+            return "New Note"
+        } else if (note && mode === "update") {
+            const formattedDates = [note.createdAt, note.updatedAt].map(date => {
+                const day = getCurrentDayFrom(date)
+                const time = date.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                });
+
+                return {
+                    date,
+                    day,
+                    time,
+                    string: `${date.toDateString()}, ${time}`,
+                }
+            })
+            const hasBeenEdited = note.createdAt.getTime() !== note.updatedAt.getTime()
+            const editedInSameDay = isSameDay(note.createdAt, note.updatedAt)
             return (
                 <div className="form-times-wrapper">
                     <time
                         className="form-note-time form-note-time-created"
-                        dateTime={note.createdAt.date.toISOString()}
+                        dateTime={note.createdAt.toISOString()}
                     >
-                        {note.createdAt.string}
+                        {formattedDates[0].string}
                     </time>
-                    {note.hasBeenEdited && (
+                    {hasBeenEdited && (
                         <time
                             className="form-note-time form-note-time-updated"
-                            dateTime={note.updatedAt.date.toISOString()}
+                            dateTime={note.updatedAt.toISOString()}
                         >
                             last edited -{" "}
-                            {note.editedInSameDay ? note.updatedAt.time : note.updatedAt.string}
+                            {editedInSameDay ? formattedDates[1].time : formattedDates[1].string}
                         </time>
                     )}
                 </div>
-            );
+            )
         }
-
         return (
-            <div>
-                <div className="spinner"></div>
-                <span>{formMode === 'create' ? 'Creating note...' : 'Updating note...'}</span>
-            </div>
-        )
+    <div>
+        <div className="spinner"></div>
+        <span>{currentAction === 'create' ? 'Creating note...' : currentAction === 'update' ? 'Updating note...' : 'Deleting note...'}</span>
+    </div>
+)
     }
 
-    return (
-        <div className="form-container">
-            <form action="" onSubmit={handleSubmit} className="note-form">
-                <header className="form-note-heading">
-                    {renderHeader()}
-                </header>
+return (
+    <div className="form-container">
+        <button
+            className="close-form-btn"
+            type="button"
+            onClick={() => !state.loading && props.closeForm()}
+        ></button>
+        <form action="" onSubmit={handleSubmit} className="note-form">
+            <header className="form-note-heading">
+                {renderHeader()}
+            </header>
 
-                <label htmlFor="note-title" className="form-note-title">
-                    Title:
-                    <input
-                        className="note-title-input"
-                        type="text"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleChange}
-                        readOnly={!isModifying}
-                        autoFocus={mode ==='create'}
-                    />
-                </label>
+            <label htmlFor="note-title" className="form-note-title">
+                Title:
+                <input
+                    className="note-title-input"
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    readOnly={!state.modifying}
+                    autoFocus={props.mode === 'create'}
+                />
+            </label>
 
-                <label htmlFor="note-content" className="form-note-content">
-                    <textarea
-                        className="note-content-input"
-                        type="text"
-                        name="content"
-                        value={formData.content}
-                        onChange={handleChange}
-                        readOnly={!isModifying}
-                    ></textarea>
-                </label>
-                {feedBack && <div className={`feedback-display ${isError ? 'feedback-display-error' : ""}`}>{feedBack}</div>}
-                <nav className="form-buttons-wrapper">
-                    <button className="form-btn save-note-btn" type="submit">
-                        Save
-                    </button>
-                    <button
-                        className="form-btn edit-note-btn"
-                        type="button"
-                        onClick={() => setIsModifying(!isModifying)}
-                    >
-                        {isModifying ? "Lock" : "Edit"}
-                    </button>
-                    <button className="form-btn delete-note-btn" type="button">
-                        Trash
-                    </button>
-                </nav>
-            </form>
-        </div>
-    );
+            <label htmlFor="note-content" className="form-note-content">
+                <textarea
+                    className="note-content-input"
+                    type="text"
+                    name="content"
+                    value={formData.content}
+                    onChange={handleChange}
+                    readOnly={!state.modifying}
+                ></textarea>
+            </label>
+            {state.feedBack && <div className={`feedback-display ${state.error ? 'feedback-display-error' : ""}`}>{state.feedBack}</div>}
+            <nav className="form-buttons-wrapper">
+                <button className="form-btn save-note-btn" type="submit">
+                    Save
+                </button>
+                <button
+                    className="form-btn edit-note-btn"
+                    type="button"
+                    onClick={() => toggleModification(!state.modifying)}
+                >
+                    {state.modifying ? "Lock" : "Edit"}
+                </button>
+                <button className="form-btn delete-note-btn" type="button" onClick={() => handleDelete()}>
+                    Trash
+                </button>
+            </nav>
+        </form>
+    </div>
+);
 }

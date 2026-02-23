@@ -3,16 +3,7 @@ import "../css/Book.css";
 import Note from "./Note";
 import NoteForm from "./NoteForm";
 import CreateNoteIcon from "../assets/svg/createNoteIcon";
-
-const getCurrentDayFrom = (timestamp) => {
-  const date = new Date(timestamp);
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
+import { requestNoteDeletion } from "../api/notes";
 
 const getDayElFrom = (day) => {
   const [y, m, d] = day.split("-");
@@ -23,25 +14,31 @@ const getDayElFrom = (day) => {
       {date.toDateString()}
     </time>
   );
-};
+}
 
-const convertNotesToObj = (rawNotes) => {
-  const notesObj = {};
+const getCurrentDayFrom = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-  rawNotes.forEach((note) => {
-    const noteDay = getCurrentDayFrom(note.createdAt);
+  return `${year}-${month}-${day}`;
+}
 
-    if (!notesObj[noteDay]) {
-      notesObj[noteDay] = [];
+const groupNotesByDay = (notesObj) => {
+  return Object.entries(notesObj).reduce((displayObj, [_, note]) => {
+    const noteDay = getCurrentDayFrom(note.createdAt)
+
+    if (!displayObj[noteDay]) {
+      displayObj[noteDay] = []
     }
 
-    notesObj[noteDay].push(note);
-  });
+    displayObj[noteDay].push(note)
 
-  return notesObj;
-};
+    return displayObj
+  }, {})
+}
 
-export default function Book({ notes: rawNotes }) {
+export default function Book(props) {
   const bookRef = useRef(null);
   const buttonRefs = useRef([null, null]);
 
@@ -53,15 +50,11 @@ export default function Book({ notes: rawNotes }) {
   ]);
   const [transformPx, setTransformPx] = useState(0);
 
-  const [notes, setNotes] = useState(() => convertNotesToObj(rawNotes));
-  const [formState, setFormState] = useState({
-    isOpen: false,
-    isLoading: false,
-    mode: "update",
-    newChanges: {},
-  });
-  const [selectedNote, setSelectedNote] = useState(null);
+  const [formState, setFormState] = useState({ isOpen: false, mode: null })
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
 
+
+  // Book navigation features
   useLayoutEffect(() => {
     if (bookRef.current) {
       const totalWidth = bookRef.current.scrollWidth;
@@ -72,20 +65,15 @@ export default function Book({ notes: rawNotes }) {
       const columnCount = Math.round(totalWidth / (viewingWidth / 2));
       setColumnCount(columnCount === 1 ? 2 : columnCount);
 
-      console.log(viewingWidth, columnCount);
     }
-  }, [notes]);
-
-  useEffect(() => {
-    setNotes(convertNotesToObj(rawNotes));
-  }, [rawNotes]);
+  }, [props.notes])
 
   const changeRed = (i) => {
     const el = buttonRefs.current[i];
     el.classList.remove("flash");
     void el.offsetWidth;
     el.classList.add("flash");
-  };
+  }
 
   const transformPage = (i) => {
     if (i === 0) {
@@ -101,79 +89,59 @@ export default function Book({ notes: rawNotes }) {
       setTransformPx((prev) => prev + columnWidth);
       setCurrentDisplayedColumns((prev) => prev.map((v) => v + 1));
     }
-  };
+  }
 
-  const selectNote = (day, noteIndex) => {
-    setSelectedNote(notes[day][noteIndex]);
-    setFormState((prev) => ({ ...prev, isOpen: true, mode: "update" }));
-  };
+  // Form features
+  function openForm(mode) {
+    setFormState(prev => ({...prev, isOpen: true, mode: mode}))
+  }
 
-  const modifyNote = (mode, { noteDay, noteIndex, newNote } = {}) => {
-    console.log('Modifying stored note')
-    console.log(mode, noteDay, noteIndex, newNote);
-    if (mode === "create") {
-      const newNoteDay = getCurrentDayFrom(newNote.createdAt);
+  const selectNote = (noteId) => {
+    setSelectedNoteId(noteId);
+    openForm('update')
+  }
 
-      setNotes((prevNotes) => {
-        const updatedDayNotes = prevNotes[newNoteDay]
-          ? [newNote, ...prevNotes[newNoteDay]]
-          : [newNote];
-
-        return {
-          ...prevNotes,
-          [newNoteDay]: updatedDayNotes,
-        };
-      });
-    } else if (mode === "update") {
-      setNotes((prevNotes) => {
-        console.log(prevNotes)
-
-        return ({
-        ...prevNotes,
-        [noteDay]: prevNotes[noteDay].map((note, i) =>
-          i === noteIndex ? newNote : note,
-        ),
-      })});
-    } else if (mode === "delete") {
-      setNotes((prevNotes) => {
-        const { [noteDay]: dayNotes, ...rest } = prevNotes;
-
-        if (dayNotes.length === 1) {
-          return rest;
-        } else {
-          return {
-            ...rest,
-            [noteDay]: dayNotes.filter((_, i) => i !== noteIndex),
-          };
-        }
-      });
+  const deleteNote = async (noteId) => {
+    const isDeleted = await props.deleteNote(noteId)
+    if (isDeleted) {
+      selectNote(null)
+      openForm('create')
     }
-  };
+    return isDeleted
+  }
+  function closeForm() {
+    selectNote(null)
+    setFormState((prev) => ({ ...prev, isOpen: false, mode: null }))
+  }
+  
+  
+  // Rendeering Page functions
+  const renderNotes = () => {
+    const groupedNotes = groupNotesByDay(props.notes)
 
-  console.log(notes)
-  const pageEls = Object.keys(notes)
-    .sort((a, b) => b.localeCompare(a))
-    .map((day) => {
-      const dayEl = getDayElFrom(day);
-      const noteEls = notes[day].map((note, i) => (
-        <Note key={note.id} select={() => selectNote(day, i)} {...note} />
+    return Object.keys(groupedNotes).map((day) => {
+      const dayEl = getDayElFrom(day)
+      const noteEls = groupedNotes[day].map(note => (
+        <Note 
+          key={note.id} 
+          onSelect={() => selectNote(note.id)} 
+          onDelete={() => props.deleteNote(note.id)} 
+          {...note} />
       ));
-      console.log(noteEls)
       return (
         <Fragment key={day}>
           {dayEl}
           {noteEls}
         </Fragment>
-      );
-    });
-
+      )
+    })
+  }
+  
   return (
     <>
       <button
         className="new-note-btn"
-        onClick={() => {
-          setFormState((prev) => ({ ...prev, isOpen: true, mode: "create" }));
-        }}
+        onClick={() => openForm('create')}
         disabled={formState.isOpen}
       >
         <CreateNoteIcon />
@@ -188,31 +156,19 @@ export default function Book({ notes: rawNotes }) {
             transition: "transform 0.5s ease",
           }}
         >
-          {pageEls}
+          {renderNotes()}
         </div>
       </div>
       {formState?.isOpen && (
-        <div className="form-wrapper">
-          <button
-            className="close-form-btn"
-            type="button"
-            onClick={() => {
-                console.log(formState.mode, formState.isLoading)
-                if (formState.isLoading) {
-                console.log('you!')
-                return //temporary
-                }
-              if (Object.keys(formState.newChanges).length !== 0) {
-                modifyNote(formState.mode, formState.newChanges);
-              } 
-              setFormState((prev) => ({ ...prev, isOpen: false }));
-            }}
-          ></button>
+        <div className="form-wrapper"> 
           <NoteForm
-            note={selectedNote}
+            note={props.notes[selectedNoteId]}
             mode={formState.mode}
-            onChanges={setFormState}
-            asLoading={setFormState}
+            selectNote={selectNote}
+            deleteNote={deleteNote}
+            createNote={props.createNote}
+            updateNote={props.updateNote}
+            closeForm={closeForm}
           />
         </div>
       )}

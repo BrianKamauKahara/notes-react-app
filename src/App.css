@@ -2,7 +2,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  --header-color: rgba(82, 48, 21, 0.85);
 }
 
 div#root {
@@ -17,6 +16,8 @@ div#root {
   height: 100%;
   /* height: clamp(580px, 65vh, 900px);
   aspect-ratio: 3 / 4; */
+
+  position: relative;
 }
 
 header.main-header {
@@ -59,4 +60,58 @@ main.book-wrapper {
     0 20px 40px rgba(0, 0, 0, 0.45),
     0 4px 10px rgba(0, 0, 0, 0.25);
   border-radius: 2px;
+}
+
+main.error-wrapper {
+  display: flex;
+  justify-content: center;
+
+  background-color: var(--header-color);
+  font-family: var(--content-font);
+
+  width: clamp(640px, 72vw, 1200px);
+  height: 86%;
+  aspect-ratio: 3 / 4;
+
+  padding: 6%;
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.45),
+    0 4px 10px rgba(0, 0, 0, 0.25);
+
+  border-radius: var(--def-border-radius);
+}
+
+.error-container {
+  background-color: white;
+  border-radius: var(--def-border-radius);
+  padding: 12px;
+}
+
+.error-wrapper > div {
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.error-wrapper h3 {
+  font-family: var(--title-font);
+  font-size: 2rem;
+  margin-bottom: 4px;
+  padding-left: 6px;
+
+  background-color: rgba(148, 83, 9, 0.123);
+  border-radius: var(--def-border-radius);
+}
+
+.error-wrapper p {
+  padding-left: 6px;
+}
+
+.error-wrapper pre {
+  background: #f7f7f7;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  overflow-x: auto;
 }
