@@ -1,5 +1,9 @@
-import DeleteNoteIcon from '../assets/svg/deleteNoteIcon'
+import DeleteNoteIcon from '../assets/svg/deleteNoteIcon.jsx'
 import '../css/Note.css'
+
+type NoteProps = {
+
+}
 
 export default function Note(props) {
     const formattedDates = [props.createdAt, props.updatedAt].map(
@@ -17,11 +21,11 @@ export default function Note(props) {
                 <time className="note-time note-time-created" dateTime={props.createdAt.toISOString()}>{formattedDates[0]}</time>
                 <h3 className="note-title" onClick={props.onSelect}>{props.title}</h3>
                 <button className="delete-note-btn" onClick={props.onDelete}>
-                <DeleteNoteIcon size={12}></DeleteNoteIcon>
-            </button>
+                    <DeleteNoteIcon size={12}></DeleteNoteIcon>
+                </button>
             </div>
             <section className="note-content">{props.content}</section>
-            
+
             {hasBeenEdited && <time className="note-time note-time-updated" dateTime={props.updatedAt.toISOString()}>edit - {formattedDates[1]}</time>}
         </article>
     )

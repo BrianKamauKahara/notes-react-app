@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
-import Book from './components/Book'
-import { fetchNotesBatch, requestCreateNote, requestNoteUpdate, requestSpecificNote, requestNoteDeletion } from './api/notes';
+import Book from './components/Book.js'
+import { fetchNotesBatch, requestCreateNote, requestNoteUpdate, requestNoteDeletion } from './api/notes.js';
 import './App.css'
 
-function randomTimePastTwoDays() {
+function randomTimePastTwoDays(): Date {
   const now = Date.now()
   const twoDaysAgo = now - 5 * 24 * 60 * 60 * 1000; // 2 days in ms
   const randomTimestamp = twoDaysAgo + Math.random() * (now - twoDaysAgo)
   return new Date(randomTimestamp)
 }
 
-function generateRandomContent(minWords = 8, maxWords = 80) {
+function generateRandomContent(minWords: number = 8, maxWords: number = 80): string {
   const WORDS = [
     "grace", "light", "truth", "code", "logic",
     "faith", "hope", "build", "create", "learn",
@@ -33,7 +33,7 @@ function generateRandomContent(minWords = 8, maxWords = 80) {
   return content
 }
 
-function computeNextBatchSize(max_length_allowed, currentLengthOfFetchedNotes, numNotesFetched) {
+function computeNextBatchSize(max_length_allowed: number, currentLengthOfFetchedNotes: number, numNotesFetched: number): number {
   const averageNoteLength = currentLengthOfFetchedNotes / numNotesFetched
   const requiredNumNotes = Math.ceil((max_length_allowed - currentLengthOfFetchedNotes) / averageNoteLength)
 
@@ -41,12 +41,12 @@ function computeNextBatchSize(max_length_allowed, currentLengthOfFetchedNotes, n
 }
 
 const convertNotesToObj = (noteArray) => {
-    const notesObj = {}
-    noteArray.forEach(note => {
-      notesObj[note.id] = note
-    })
-  
-    return notesObj
+  const notesObj = {}
+  noteArray.forEach(note => {
+    notesObj[note.id] = note
+  })
+
+  return notesObj
 }
 
 function App() {
@@ -60,9 +60,10 @@ function App() {
       const newNote = await requestCreateNote(noteDetails)
       setNotes(prev => {
         return {
-          [newNote.id] : newNote,
+          [newNote.id]: newNote,
           ...prev
-      }})
+        }
+      })
       return newNote
     } catch (err) {
       console.error(err)
@@ -75,7 +76,7 @@ function App() {
       const newNote = await requestNoteUpdate(noteId, newDetails)
       setNotes(prev => ({
         ...prev,
-        [noteId] : newNote
+        [noteId]: newNote
       }))
     } catch (err) {
       console.error(err)
@@ -88,10 +89,10 @@ function App() {
       try {
         await requestNoteDeletion(noteId)
         setNotes(prev => {
-          const {[noteId]: _, ...rest} = prev
+          const { [noteId]: _, ...rest } = prev
           return rest
         })
-        
+
         return true
       } catch (err) {
         console.error(err)
@@ -116,8 +117,8 @@ function App() {
       if (totalFetchedLength >= MAX_ESTIMATED_LENGTH) return fetchedNotes
 
       const newNotes = await fetchNotesBatch({
-              start: fetchedNotes.length ? fetchedNotes[fetchedNotes.length - 1].id : undefined,
-              limit: nextBatchSize
+        start: fetchedNotes.length ? fetchedNotes[fetchedNotes.length - 1].id : undefined,
+        limit: nextBatchSize
       })
 
       if (!newNotes || newNotes.length === 0) {
@@ -132,7 +133,7 @@ function App() {
 
       return fetchNotesRecursively()
     }
-    
+
     fetchNotesRecursively() // Fetch a complete batch of notes
       .then(fetchedNotes => setNotes(prev => ({
         ...prev,
@@ -140,38 +141,39 @@ function App() {
       })))
       .catch(err => {
         console.error(err)
-        setError(err.message)})
+        setError(err.message)
+      })
       .finally(() => setIsLoading(false))
   }, [])
 
   return (
     <>
-      {!error ? 
-      <>
-        <header className='main-header'>Jot It Down...</header>
-        <main className="book-wrapper">
-          {isLoading ? 
-            <div className="book-loading">Loading Your Notes...</div> :
-            <Book notes={notes} selectNote={selectNote} createNote={createNote} updateNote={updateNote} deleteNote={deleteNote}/>}
+      {!error ?
+        <>
+          <header className='main-header'>Jot It Down...</header>
+          <main className="book-wrapper">
+            {isLoading ?
+              <div className="book-loading">Loading Your Notes...</div> :
+              <Book notes={notes} selectNote={selectNote} createNote={createNote} updateNote={updateNote} deleteNote={deleteNote} />}
 
-        </main> 
-      </> :
-      <main className='error-wrapper'>
+          </main>
+        </> :
+        <main className='error-wrapper'>
           <div className='error-container'>
             <h3>An Error has Occured :{'('}</h3>
             <hr /><br />
             <p>
-                <strong>Message:</strong>{' '}
-                {error.message || String(error)}
+              <strong>Message:</strong>{' '}
+              {error.message || String(error)}
             </p>
 
             {error.stack && (
-                <pre style={{ whiteSpace: 'pre-wrap' }}>
-                    {error.stack}
-                </pre>
+              <pre style={{ whiteSpace: 'pre-wrap' }}>
+                {error.stack}
+              </pre>
             )}
-        </div>
-      </main>}
+          </div>
+        </main>}
     </>
   )
 }

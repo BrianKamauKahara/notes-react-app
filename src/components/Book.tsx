@@ -1,9 +1,8 @@
-import { useLayoutEffect, useRef, useState, useEffect, Fragment } from "react";
-import "../css/Book.css";
-import Note from "./Note";
-import NoteForm from "./NoteForm";
-import CreateNoteIcon from "../assets/svg/createNoteIcon";
-import { requestNoteDeletion } from "../api/notes";
+import { useLayoutEffect, useRef, useState, Fragment } from "react";
+import "../css/Book.css"
+import Note from "./Note.jsx";
+import NoteForm from "./NoteForm.jsx";
+import CreateNoteIcon from "../assets/svg/createNoteIcon.jsx";
 
 const getDayElFrom = (day) => {
   const [y, m, d] = day.split("-");
@@ -93,7 +92,7 @@ export default function Book(props) {
 
   // Form features
   function openForm(mode) {
-    setFormState(prev => ({...prev, isOpen: true, mode: mode}))
+    setFormState(prev => ({ ...prev, isOpen: true, mode: mode }))
   }
 
   const selectNote = (noteId) => {
@@ -113,8 +112,8 @@ export default function Book(props) {
     selectNote(null)
     setFormState((prev) => ({ ...prev, isOpen: false, mode: null }))
   }
-  
-  
+
+
   // Rendeering Page functions
   const renderNotes = () => {
     const groupedNotes = groupNotesByDay(props.notes)
@@ -122,10 +121,10 @@ export default function Book(props) {
     return Object.keys(groupedNotes).map((day) => {
       const dayEl = getDayElFrom(day)
       const noteEls = groupedNotes[day].map(note => (
-        <Note 
-          key={note.id} 
-          onSelect={() => selectNote(note.id)} 
-          onDelete={() => props.deleteNote(note.id)} 
+        <Note
+          key={note.id}
+          onSelect={() => selectNote(note.id)}
+          onDelete={() => props.deleteNote(note.id)}
           {...note} />
       ));
       return (
@@ -136,7 +135,7 @@ export default function Book(props) {
       )
     })
   }
-  
+
   return (
     <>
       <button
@@ -160,7 +159,7 @@ export default function Book(props) {
         </div>
       </div>
       {formState?.isOpen && (
-        <div className="form-wrapper"> 
+        <div className="form-wrapper">
           <NoteForm
             note={props.notes[selectedNoteId]}
             mode={formState.mode}
