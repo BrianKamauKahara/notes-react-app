@@ -1,8 +1,17 @@
-import { useEffect, useState } from 'react'
-import Book from './components/Book.js'
-import { fetchNotesBatch, requestCreateNote, requestNoteUpdate, requestNoteDeletion } from './api/notes.js';
+import { useCallback, useEffect, useState, type ReactElement } from 'react'
+import Book from './components/Book'
+import { fetchNotesBatch, requestCreateNote, requestNoteUpdate, requestNoteDeletion } from './api/notes'
 import './App.css'
 
+// Note Types
+import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from './api/notes'
+
+type NoteIdType = NoteType["id"]
+
+export type NotesObjType = Record<NoteIdType, NoteType>
+
+
+// Dev Functions
 function randomTimePastTwoDays(): Date {
   const now = Date.now()
   const twoDaysAgo = now - 5 * 24 * 60 * 60 * 1000; // 2 days in ms
@@ -33,15 +42,18 @@ function generateRandomContent(minWords: number = 8, maxWords: number = 80): str
   return content
 }
 
+
+// Util Function
 function computeNextBatchSize(max_length_allowed: number, currentLengthOfFetchedNotes: number, numNotesFetched: number): number {
+  if (numNotesFetched === 0) return 2
   const averageNoteLength = currentLengthOfFetchedNotes / numNotesFetched
   const requiredNumNotes = Math.ceil((max_length_allowed - currentLengthOfFetchedNotes) / averageNoteLength)
 
   return requiredNumNotes
 }
 
-const convertNotesToObj = (noteArray) => {
-  const notesObj = {}
+const convertNotesToObj = (noteArray: NoteType[]): NotesObjType => {
+  const notesObj: NotesObjType = {}
   noteArray.forEach(note => {
     notesObj[note.id] = note
   })
@@ -49,15 +61,15 @@ const convertNotesToObj = (noteArray) => {
   return notesObj
 }
 
-function App() {
+function App(): ReactElement {
   const MAX_ESTIMATED_LENGTH = 2500
-  const [notes, setNotes] = useState({})
-  const [error, setError] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [notes, setNotes] = useState<NotesObjType>({})
+  const [error, setError] = useState<Error | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
-  async function createNote(noteDetails) {
+  const createNote = useCallback(async (noteDetails: NoteStructure): Promise<NoteType> => {
     try {
-      const newNote = await requestCreateNote(noteDetails)
+      const newNote: NoteType = await requestCreateNote(noteDetails)
       setNotes(prev => {
         return {
           [newNote.id]: newNote,
@@ -69,11 +81,11 @@ function App() {
       console.error(err)
       throw err
     }
-  }
+  }, [])
 
-  async function updateNote(noteId, newDetails) {
+  const updateNote = useCallback(async (noteId: NoteIdType, newDetails: NoteStructure): Promise<void> => {
     try {
-      const newNote = await requestNoteUpdate(noteId, newDetails)
+      const newNote: NoteType = await requestNoteUpdate(noteId, newDetails)
       setNotes(prev => ({
         ...prev,
         [noteId]: newNote
@@ -82,9 +94,9 @@ function App() {
       console.error(err)
       throw err
     }
-  }
+  }, [])
 
-  async function deleteNote(noteId) {
+  const deleteNote = useCallback(async (noteId: NoteIdType): Promise<boolean> => {
     if (window.confirm("Are you sure you want to delete this note?")) {
       try {
         await requestNoteDeletion(noteId)
@@ -101,25 +113,30 @@ function App() {
     } else {
       return false
     }
-  }
+  }, [])
 
-  function selectNote(noteId) {
+  const selectNote = useCallback((noteId: NoteIdType): NoteType | undefined => {
     return notes[noteId]
-  }
+  }, [])
 
   useEffect(() => {
     setIsLoading(true)
-    const fetchedNotes = []
-    let totalFetchedLength = 0
-    let nextBatchSize = 2
+    const fetchedNotes: NoteType[] = []
+    let totalFetchedLength: number = 0
+    let nextBatchSize: number = 2
 
     const fetchNotesRecursively = async () => {
       if (totalFetchedLength >= MAX_ESTIMATED_LENGTH) return fetchedNotes
 
-      const newNotes = await fetchNotesBatch({
-        start: fetchedNotes.length ? fetchedNotes[fetchedNotes.length - 1].id : undefined,
-        limit: nextBatchSize
-      })
+      const newNotes: NoteType[] =
+        fetchedNotes.length !== 0
+          ? await fetchNotesBatch({
+            start: fetchedNotes[fetchedNotes.length - 1]!.id,
+            limit: nextBatchSize
+          })
+          : await fetchNotesBatch({
+            limit: nextBatchSize
+          })
 
       if (!newNotes || newNotes.length === 0) {
         return fetchedNotes
@@ -127,7 +144,7 @@ function App() {
 
       fetchedNotes.push(...newNotes)
 
-      const newNotesLength = newNotes.reduce((sum, note) => sum + note.content.length, 0)
+      const newNotesLength: number = newNotes.reduce((sum, note) => sum + note.content.length, 0)
       totalFetchedLength += newNotesLength
       nextBatchSize = computeNextBatchSize(MAX_ESTIMATED_LENGTH, totalFetchedLength, fetchedNotes.length)
 
@@ -139,9 +156,9 @@ function App() {
         ...prev,
         ...convertNotesToObj(fetchedNotes)
       })))
-      .catch(err => {
+      .catch((err: unknown) => {
         console.error(err)
-        setError(err.message)
+        setError(err instanceof Error ? err : new Error(String(err)))
       })
       .finally(() => setIsLoading(false))
   }, [])

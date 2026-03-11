@@ -1,21 +1,32 @@
-import { useLayoutEffect, useRef, useState, Fragment } from "react";
+import { useLayoutEffect, useRef, useState, Fragment, type ReactElement } from "react";
 import "../css/Book.css"
-import Note from "./Note.jsx";
-import NoteForm from "./NoteForm.jsx";
-import CreateNoteIcon from "../assets/svg/createNoteIcon.jsx";
+import Note from "./Note";
+import NoteForm from "./NoteForm";
+import CreateNoteIcon from "../assets/svg/createNoteIcon";
 
-const getDayElFrom = (day) => {
-  const [y, m, d] = day.split("-");
+// Types
+import { type NormalizedNote as NoteType } from "../api/notes";
+import { type NotesObjType } from "../App";
+type DateString = `${number}-${string | number}-${string | number}`
+
+type DisplayObjType = {
+  [key: DateString]: NoteType[]
+}
+
+// Util functions
+function getDayElFrom(day: DateString): ReactElement {
+  const [y, m, d] = day.split("-").map(Number) as [number, number, number]
+
   const date = new Date(y, m - 1, d);
 
   return (
-    <time dateTime={date} className="notes-day">
+    <time dateTime={day} className="notes-day">
       {date.toDateString()}
-    </time>
-  );
+    </time>)
+    ;
 }
 
-const getCurrentDayFrom = (date) => {
+const getCurrentDayFrom = (date: Date): DateString => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -23,7 +34,7 @@ const getCurrentDayFrom = (date) => {
   return `${year}-${month}-${day}`;
 }
 
-const groupNotesByDay = (notesObj) => {
+const groupNotesByDay = (notesObj: NotesObjType): DisplayObjType => {
   return Object.entries(notesObj).reduce((displayObj, [_, note]) => {
     const noteDay = getCurrentDayFrom(note.createdAt)
 
@@ -34,7 +45,13 @@ const groupNotesByDay = (notesObj) => {
     displayObj[noteDay].push(note)
 
     return displayObj
-  }, {})
+  }, {} as DisplayObjType)
+}
+
+// Actual Book Prop
+type BookPropsType = {
+  notes: NotesObjType,
+
 }
 
 export default function Book(props) {
