@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react'
+import { type ReactElement } from 'react'
+import useNotes from './hooks/useNotes'
 import Book from './components/Book'
+import Error from './components/MainPageError'
 
 import './App.css'
 
 function App(): ReactElement {
-  const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const { loading, error } = useNotes()
 
   return (
     <>
@@ -13,28 +14,12 @@ function App(): ReactElement {
         <>
           <header className='main-header'>Jot It Down...</header>
           <main className="book-wrapper">
-            {isLoading ?
+            {loading ?
               <div className="book-loading">Loading Your Notes...</div> :
-              <Book notes={notes} selectNote={selectNote} createNote={createNote} updateNote={updateNote} deleteNote={deleteNote} />}
-
+              <Book />}
           </main>
         </> :
-        <main className='error-wrapper'>
-          <div className='error-container'>
-            <h3>An Error has Occured :{'('}</h3>
-            <hr /><br />
-            <p>
-              <strong>Message:</strong>{' '}
-              {error.message || String(error)}
-            </p>
-
-            {error.stack && (
-              <pre style={{ whiteSpace: 'pre-wrap' }}>
-                {error.stack}
-              </pre>
-            )}
-          </div>
-        </main>}
+        <Error error={error} />}
     </>
   )
 }

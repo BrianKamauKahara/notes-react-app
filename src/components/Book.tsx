@@ -1,12 +1,13 @@
-import { useLayoutEffect, useRef, useState, Fragment, type ReactElement } from "react";
+import { useLayoutEffect, useRef, useState, Fragment, type ReactElement, useReducer } from "react";
 import "../css/Book.css"
 import Note from "./Note";
 import NoteForm from "./NoteForm";
 import CreateNoteIcon from "../assets/svg/createNoteIcon";
 
 // Types
-import { type NormalizedNote as NoteType } from "../api/notes";
-import { type NotesObjType } from "../App";
+import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes";
+import { type NotesStateType } from "../context/NotesProvider";
+import useNotes from "../hooks/useNotes";
 type DateString = `${number}-${string | number}-${string | number}`
 
 type DisplayObjType = {
@@ -34,7 +35,7 @@ const getCurrentDayFrom = (date: Date): DateString => {
   return `${year}-${month}-${day}`;
 }
 
-const groupNotesByDay = (notesObj: NotesObjType): DisplayObjType => {
+const groupNotesByDay = (notesObj: NotesStateType): DisplayObjType => {
   return Object.entries(notesObj).reduce((displayObj, [_, note]) => {
     const noteDay = getCurrentDayFrom(note.createdAt)
 
@@ -49,26 +50,100 @@ const groupNotesByDay = (notesObj: NotesObjType): DisplayObjType => {
 }
 
 // Actual Book Prop
-type BookPropsType = {
-  notes: NotesObjType,
-
+// States and Init State
+type FormStateType = {
+  selectedNoteId: NoteType["id"] | null,
+  formOpen: boolean
 }
 
-export default function Book(props) {
-  const bookRef = useRef(null);
-  const buttonRefs = useRef([null, null]);
+type BookStateType = {
+  columnWidth: number,
+  columnCount: number,
+  currentDisplayedColumns: [number, number]
+} & FormStateType
 
-  const [columnWidth, setColumnWidth] = useState(0);
-  const [columnCount, setColumnCount] = useState(0);
+const initBookState: BookStateType = {
+  columnWidth: 0,
+  columnCount: 2,
+  currentDisplayedColumns: [1, 2],
 
-  const [currentDisplayedColumns, setCurrentDisplayedColumns] = useState([
-    1, 2,
-  ]);
-  const [transformPx, setTransformPx] = useState(0);
+  selectedNoteId: '',
+  formOpen: false
+}
 
-  const [formState, setFormState] = useState({ isOpen: false, mode: null })
-  const [selectedNoteId, setSelectedNoteId] = useState(null);
+// Reducer
+export const FORM_REDUCER_ACTIONS = {
+  OPEN_FORM: "OPEN_FORM",
+  CLOSE_FORM: "CLOSE_FORM"
+} as const
+type FORM_ACTION_PAYLOADS = {}
+export type FORM_PAYLOAD_TYPES = FORM_ACTION_PAYLOADS[keyof FORM_ACTION_PAYLOADS]
 
+export const NOTE_REDUCER_ACTIONS = {
+  NEW_NOTE_CREATED: "NEW_NOTE_CREATED",
+  NOTE_UPDATED: "NOTE_UPDATED",
+  NOTE_DELETED: "NOTE_DELETED",
+}
+type NOTE_ACTION_PAYLOADS = {
+  NEW_NOTE_CREATED: NoteType,
+  NOTE_UPDATED: NoteStructure & Pick<NoteType, "updatedAt">
+  NOTE_DELETED: NoteType["id"]
+}
+export type NOTE_PAYLOAD_TYPES = NOTE_ACTION_PAYLOADS[keyof NOTE_ACTION_PAYLOADS]
+
+const BOOK_REDUCER_ACTIONS = {
+  SET_NEW_COLUMNS: "SET_NEW_COLUMNS",
+  GO_NEXT_PAGES: "GO_NEXT_PAGES",
+  GO_PREVIOUS_PAGES: "GO_PREVIOUS_PAGES",
+  ...FORM_REDUCER_ACTIONS,
+  ...NOTE_REDUCER_ACTIONS
+} as const
+type BOOK_REDUCER_PAYLOADS = {
+  SET_NEW_COLUMNS: { totalWidth: number, viewingWidth: number },
+} & FORM_ACTION_PAYLOADS & NOTE_PAYLOAD_TYPES
+
+type BookReducerAction = {
+  [K in keyof BookReducerActionsType]:
+  { type: K } &
+  (K extends keyof BOOK_REDUCER_PAYLOADS
+    ? { payload?: BOOK_REDUCER_PAYLOADS[K] }
+    : {})
+}[keyof BookReducerActionsType]
+
+type BookReducerActionsType = typeof BOOK_REDUCER_ACTIONS
+
+
+const bookReducer = (state: BookStateType, action: BookReducerAction): BookStateType => {
+  switch (action.type) {
+    // Book Actions
+    case "SET_NEW_COLUMNS": {
+      const { totalWidth, viewingWidth } = action.payload
+
+      return { ...state, columnWidth: viewingWidth / 2, columnCount: Math.round(totalWidth / (viewingWidth / 2)) }
+    }
+    case "GO_NEXT_PAGES": {
+      return { ...state, currentDisplayedColumns: state.currentDisplayedColumns.map(v => v + 1) as [number, number] }
+    }
+    case "GO_PREVIOUS_PAGES": {
+      return { ...state, currentDisplayedColumns: state.currentDisplayedColumns.map(v => v - 1) as [number, number] }
+    }
+
+    // Form Actions
+    case "OPEN_FORM": {
+      return { ...state, formOpen: true }
+    }
+    case "CLOSE_FORM": {
+      return { ...state, formOpen: false }
+    }
+  }
+}
+
+export default function Book() {
+  const bookRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([null, null]);
+
+  const { notes, createNote, updateNote, deleteNote, selectNote } = useNotes()
+  const [state, dispatch] = useReducer(bookReducer, initBookState)
 
   // Book navigation features
   useLayoutEffect(() => {
@@ -76,40 +151,37 @@ export default function Book(props) {
       const totalWidth = bookRef.current.scrollWidth;
       const viewingWidth = bookRef.current.clientWidth;
 
-      setColumnWidth(viewingWidth / 2);
-
-      const columnCount = Math.round(totalWidth / (viewingWidth / 2));
-      setColumnCount(columnCount === 1 ? 2 : columnCount);
+      dispatch({
+        type: "SET_NEW_COLUMNS",
+        payload: { totalWidth, viewingWidth }
+      })
 
     }
-  }, [props.notes])
+  }, [notes])
 
-  const changeRed = (i) => {
-    const el = buttonRefs.current[i];
+  const changeRed = (i: 0 | 1): void => {
+    const el = buttonRefs.current[i] as HTMLButtonElement
     el.classList.remove("flash");
     void el.offsetWidth;
     el.classList.add("flash");
   }
 
-  const transformPage = (i) => {
+  const transformPage = (i: number): void => {
     if (i === 0) {
       // Previous Page
       if (currentDisplayedColumns[0] === 1) return changeRed(0);
-
-      setTransformPx((prev) => prev - columnWidth);
-      setCurrentDisplayedColumns((prev) => prev.map((v) => v - 1));
+      dispatch({ type: "GO_PREVIOUS_PAGES" })
     } else {
       // Next Page
-      if (currentDisplayedColumns[1] === columnCount) return changeRed(1);
+      if (currentDisplayedColumns[1] === state.columnCount) return changeRed(1);
+      dispatch({ type: "GO_NEXT_PAGES" })
 
-      setTransformPx((prev) => prev + columnWidth);
-      setCurrentDisplayedColumns((prev) => prev.map((v) => v + 1));
     }
   }
 
   // Form features
-  function openForm(mode) {
-    setFormState(prev => ({ ...prev, isOpen: true, mode: mode }))
+  function openForm(id?: NoteType["id"]) {
+    dispatch({ type: "OPEN_FORM" })
   }
 
   const selectNote = (noteId) => {
@@ -118,7 +190,7 @@ export default function Book(props) {
   }
 
   const deleteNote = async (noteId) => {
-    const isDeleted = await props.deleteNote(noteId)
+    const isDeleted = await deleteNote(noteId)
     if (isDeleted) {
       selectNote(null)
       openForm('create')
@@ -133,7 +205,7 @@ export default function Book(props) {
 
   // Rendeering Page functions
   const renderNotes = () => {
-    const groupedNotes = groupNotesByDay(props.notes)
+    const groupedNotes = groupNotesByDay(notes)
 
     return Object.keys(groupedNotes).map((day) => {
       const dayEl = getDayElFrom(day)
@@ -141,7 +213,7 @@ export default function Book(props) {
         <Note
           key={note.id}
           onSelect={() => selectNote(note.id)}
-          onDelete={() => props.deleteNote(note.id)}
+          onDelete={() => deleteNote(note.id)}
           {...note} />
       ));
       return (
@@ -178,12 +250,12 @@ export default function Book(props) {
       {formState?.isOpen && (
         <div className="form-wrapper">
           <NoteForm
-            note={props.notes[selectedNoteId]}
+            note={notes[selectedNoteId]}
             mode={formState.mode}
             selectNote={selectNote}
             deleteNote={deleteNote}
-            createNote={props.createNote}
-            updateNote={props.updateNote}
+            createNote={createNote}
+            updateNote={updateNote}
             closeForm={closeForm}
           />
         </div>
