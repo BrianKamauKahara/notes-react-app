@@ -106,7 +106,7 @@ export const useNotesContext = () => {
 
 
         fetchNotes() // Fetch a complete batch of notes
-            .then(fetchedNotes => setNotes(convertNotesToObj(fetchedNotes)))
+            .then(fetchedNotes => setNotes(prev => ({ ...prev, ...convertNotesToObj(fetchedNotes) })))
             .catch((err: unknown) => {
                 if (err instanceof Error) {
                     setIsError(err)

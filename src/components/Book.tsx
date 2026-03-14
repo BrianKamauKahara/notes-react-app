@@ -2,17 +2,16 @@ import { useLayoutEffect, useRef, useState, Fragment, type ReactElement, useRedu
 import "../css/Book.css"
 import Note from "./Note";
 import NoteForm from "./NoteForm";
-import CreateNoteIcon from "../assets/svg/createNoteIcon";
+
 
 // Types
 import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes";
 import { type NotesStateType } from "../context/NotesProvider";
 import useNotes from "../hooks/useNotes";
-type DateString = `${number}-${string | number}-${string | number}`
+import CreateNoteButton from "./CreateNoteButton";
+type DateString = `${number}-${string}-${string}`
 
-type DisplayObjType = {
-  [key: DateString]: NoteType[]
-}
+type DisplayObjType = Record<DateString, NoteType[]>
 
 // Util functions
 function getDayElFrom(day: DateString): ReactElement {
@@ -51,66 +50,44 @@ const groupNotesByDay = (notesObj: NotesStateType): DisplayObjType => {
 
 // Actual Book Prop
 // States and Init State
-type FormStateType = {
-  selectedNoteId: NoteType["id"] | null,
-  formOpen: boolean
-}
-
 type BookStateType = {
   columnWidth: number,
   columnCount: number,
-  currentDisplayedColumns: [number, number]
-} & FormStateType
-
+  currentDisplayedColumns: [number, number],
+  formOpen: boolean,
+  mode: 'create' | 'update'
+  selectedNoteId: NoteType["id"]
+}
 const initBookState: BookStateType = {
   columnWidth: 0,
   columnCount: 2,
   currentDisplayedColumns: [1, 2],
-
-  selectedNoteId: '',
-  formOpen: false
+  formOpen: false,
+  mode: 'create',
+  selectedNoteId: ''
 }
 
-// Reducer
-export const FORM_REDUCER_ACTIONS = {
-  OPEN_FORM: "OPEN_FORM",
-  CLOSE_FORM: "CLOSE_FORM"
-} as const
-type FORM_ACTION_PAYLOADS = {}
-export type FORM_PAYLOAD_TYPES = FORM_ACTION_PAYLOADS[keyof FORM_ACTION_PAYLOADS]
-
-export const NOTE_REDUCER_ACTIONS = {
-  NEW_NOTE_CREATED: "NEW_NOTE_CREATED",
-  NOTE_UPDATED: "NOTE_UPDATED",
-  NOTE_DELETED: "NOTE_DELETED",
-}
-type NOTE_ACTION_PAYLOADS = {
-  NEW_NOTE_CREATED: NoteType,
-  NOTE_UPDATED: NoteStructure & Pick<NoteType, "updatedAt">
-  NOTE_DELETED: NoteType["id"]
-}
-export type NOTE_PAYLOAD_TYPES = NOTE_ACTION_PAYLOADS[keyof NOTE_ACTION_PAYLOADS]
-
+// Reducer 
 const BOOK_REDUCER_ACTIONS = {
   SET_NEW_COLUMNS: "SET_NEW_COLUMNS",
   GO_NEXT_PAGES: "GO_NEXT_PAGES",
   GO_PREVIOUS_PAGES: "GO_PREVIOUS_PAGES",
-  ...FORM_REDUCER_ACTIONS,
-  ...NOTE_REDUCER_ACTIONS
+  OPEN_FORM: "OPEN_FORM",
+  CLOSE_FORM: "CLOSE_FORM"
 } as const
 type BOOK_REDUCER_PAYLOADS = {
   SET_NEW_COLUMNS: { totalWidth: number, viewingWidth: number },
-} & FORM_ACTION_PAYLOADS & NOTE_PAYLOAD_TYPES
+  OPEN_FORM: { mode: 'create' } | { mode: 'update', noteId: NoteType["id"] }
+}
 
 type BookReducerAction = {
-  [K in keyof BookReducerActionsType]:
+  [K in keyof typeof BOOK_REDUCER_ACTIONS]:
   { type: K } &
   (K extends keyof BOOK_REDUCER_PAYLOADS
-    ? { payload?: BOOK_REDUCER_PAYLOADS[K] }
+    ? { payload: BOOK_REDUCER_PAYLOADS[K] }
     : {})
-}[keyof BookReducerActionsType]
+}[keyof typeof BOOK_REDUCER_ACTIONS]
 
-type BookReducerActionsType = typeof BOOK_REDUCER_ACTIONS
 
 
 const bookReducer = (state: BookStateType, action: BookReducerAction): BookStateType => {
@@ -127,22 +104,27 @@ const bookReducer = (state: BookStateType, action: BookReducerAction): BookState
     case "GO_PREVIOUS_PAGES": {
       return { ...state, currentDisplayedColumns: state.currentDisplayedColumns.map(v => v - 1) as [number, number] }
     }
-
-    // Form Actions
     case "OPEN_FORM": {
-      return { ...state, formOpen: true }
+      const openMode = action.payload.mode
+
+      const formConfig = openMode === 'create'
+        ? { mode: 'create' as const }
+        : { mode: 'update' as const, selectedNoteId: action.payload.noteId }
+
+      return { ...state, formOpen: true, ...formConfig }
     }
     case "CLOSE_FORM": {
-      return { ...state, formOpen: false }
+      return { ...state, formOpen: false, selectedNoteId: '', mode: "create" }
     }
   }
 }
 
 export default function Book() {
-  const bookRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([null, null]);
+  const bookRef = useRef<HTMLDivElement>(null)
+  const prevPageBtnRef = useRef<HTMLButtonElement>(null)
+  const nextPageBtnRef = useRef<HTMLButtonElement>(null)
 
-  const { notes, createNote, updateNote, deleteNote, selectNote } = useNotes()
+  const { notes, selectNote } = useNotes()
   const [state, dispatch] = useReducer(bookReducer, initBookState)
 
   // Book navigation features
@@ -160,81 +142,75 @@ export default function Book() {
   }, [notes])
 
   const changeRed = (i: 0 | 1): void => {
-    const el = buttonRefs.current[i] as HTMLButtonElement
-    el.classList.remove("flash");
-    void el.offsetWidth;
-    el.classList.add("flash");
+    const ref = i === 0 ? prevPageBtnRef : nextPageBtnRef
+
+    const el = ref.current
+    if (!el) return
+
+    el.classList.remove("flash")
+    void el.offsetWidth
+    el.classList.add("flash")
   }
 
   const transformPage = (i: number): void => {
     if (i === 0) {
       // Previous Page
-      if (currentDisplayedColumns[0] === 1) return changeRed(0);
+      if (state.currentDisplayedColumns[0] === 1) return changeRed(0);
       dispatch({ type: "GO_PREVIOUS_PAGES" })
     } else {
       // Next Page
-      if (currentDisplayedColumns[1] === state.columnCount) return changeRed(1);
+      if (state.currentDisplayedColumns[1] === state.columnCount) return changeRed(1);
       dispatch({ type: "GO_NEXT_PAGES" })
 
     }
   }
 
   // Form features
-  function openForm(id?: NoteType["id"]) {
-    dispatch({ type: "OPEN_FORM" })
-  }
+  const openCreateForm = () =>
+    dispatch({ type: "OPEN_FORM", payload: { mode: "create" } })
 
-  const selectNote = (noteId) => {
-    setSelectedNoteId(noteId);
-    openForm('update')
-  }
+  const openUpdateForm = (noteId: NoteType["id"]) =>
+    dispatch({ type: "OPEN_FORM", payload: { mode: "update", noteId } })
 
-  const deleteNote = async (noteId) => {
-    const isDeleted = await deleteNote(noteId)
-    if (isDeleted) {
-      selectNote(null)
-      openForm('create')
-    }
-    return isDeleted
-  }
-  function closeForm() {
-    selectNote(null)
-    setFormState((prev) => ({ ...prev, isOpen: false, mode: null }))
-  }
+  const closeForm = () =>
+    dispatch({ type: "CLOSE_FORM" })
 
 
   // Rendeering Page functions
-  const renderNotes = () => {
-    const groupedNotes = groupNotesByDay(notes)
-
-    return Object.keys(groupedNotes).map((day) => {
-      const dayEl = getDayElFrom(day)
-      const noteEls = groupedNotes[day].map(note => (
-        <Note
-          key={note.id}
-          onSelect={() => selectNote(note.id)}
-          onDelete={() => deleteNote(note.id)}
-          {...note} />
-      ));
-      return (
-        <Fragment key={day}>
-          {dayEl}
-          {noteEls}
-        </Fragment>
-      )
-    })
+  function getNoteElFrom(note: NoteType) {
+    return <Note
+      key={note.id}
+      onSelect={() => { openUpdateForm(note.id) }}
+      onDelete={() => { openCreateForm() }}
+      note={note}
+    />
   }
 
+  const renderNotes = () => {
+    const groupedNotes: DisplayObjType = groupNotesByDay(notes)
+
+    return (Object.keys(groupedNotes) as DateString[])
+      .map((day: keyof typeof groupedNotes) => {
+        const dayEl = getDayElFrom(day)
+        const noteEls = groupedNotes[day]?.map(note => getNoteElFrom(note))
+
+        return (
+          <Fragment key={day}>
+            {dayEl}
+            {noteEls}
+          </Fragment>
+        )
+      })
+  }
+  const renderedNotes = renderNotes()
+  const transformPx = (state.currentDisplayedColumns[0] - 1) * state.columnWidth
   return (
     <>
-      <button
-        className="new-note-btn"
-        onClick={() => openForm('create')}
-        disabled={formState.isOpen}
-      >
-        <CreateNoteIcon />
-      </button>{" "}
-      <br />
+      < CreateNoteButton
+        isDisabled={state.formOpen}
+        onClick={openCreateForm}
+      />
+
       <div className="book-container">
         <div
           ref={bookRef}
@@ -244,25 +220,23 @@ export default function Book() {
             transition: "transform 0.5s ease",
           }}
         >
-          {renderNotes()}
+          {renderedNotes}
         </div>
       </div>
-      {formState?.isOpen && (
-        <div className="form-wrapper">
-          <NoteForm
-            note={notes[selectedNoteId]}
-            mode={formState.mode}
-            selectNote={selectNote}
-            deleteNote={deleteNote}
-            createNote={createNote}
-            updateNote={updateNote}
-            closeForm={closeForm}
-          />
-        </div>
+
+      {state.formOpen && (
+        <NoteForm
+          noteId={selectNote(state.selectedNoteId)}
+          mode={state.mode}
+          onDelete={openUpdateForm}
+          closeForm={closeForm}
+        />
+
       )}
+
       <button
         id="prev-page-btn"
-        ref={(el) => (buttonRefs.current[0] = el)}
+        ref={prevPageBtnRef}
         className="page-switch-btn"
         onClick={() => transformPage(0)}
       >
@@ -270,7 +244,7 @@ export default function Book() {
       </button>
       <button
         id="next-page-btn"
-        ref={(el) => (buttonRefs.current[1] = el)}
+        ref={nextPageBtnRef}
         className="page-switch-btn"
         onClick={() => transformPage(1)}
       >

@@ -2,6 +2,8 @@ import { useReducer, useState } from "react";
 import "../css/NoteForm.css";
 import { requestSpecificNote, requestNoteUpdate, requestNoteDeletion, requestCreateNote } from "../api/notes"
 
+
+// Util Functions
 const getCurrentDayFrom = (timestamp) => {
     const date = new Date(timestamp);
 
@@ -13,13 +15,13 @@ const getCurrentDayFrom = (timestamp) => {
 }
 
 function isSameDay(date1, date2) {
-  if (!date1 || !date2) return false
+    if (!date1 || !date2) return false
 
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  )
+    return (
+        date1.getFullYear() === date2.getFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate()
+    )
 }
 
 const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
@@ -42,6 +44,7 @@ const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
     }
 }
 
+// A...
 const initialFormState = {
     modifying: true,
     feedBack: "",
@@ -66,7 +69,7 @@ export default function NoteForm(props) {
     }
 
     const clearFormContents = () => {
-        setFormData({ title: "", content: ""})
+        setFormData({ title: "", content: "" })
     }
 
     // Form State Handling
@@ -74,10 +77,10 @@ export default function NoteForm(props) {
 
     function reducer(state, action) {
         switch (action.type) {
-            case "TOGGLE_MODIFICATION": 
+            case "TOGGLE_MODIFICATION":
                 return state.loading
-        ? state
-        : { ...state, modifying: !state.modifying }
+                    ? state
+                    : { ...state, modifying: !state.modifying }
             case "FORM_START_LOADING":
                 return { ...state, loading: true, error: null, modifying: false, currentAction: action.payload }
 
@@ -150,19 +153,19 @@ export default function NoteForm(props) {
     const handleDelete = async () => {
         if (props.note) {
             try {
-                dispatch({ 
+                dispatch({
                     type: "FORM_START_LOADING",
                     payload: 'delete'
-                 })
+                })
                 const deleted = await props.deleteNote(props.note.id)
                 if (deleted) {
-                    dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })    
+                    dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })
                     clearFormContents()
                 }
             } catch (error) {
-                dispatch({ type: "OBTAINED_ERROR", payload: {error}})
+                dispatch({ type: "OBTAINED_ERROR", payload: { error } })
             } finally {
-                dispatch({ type: "FORM_STOP_LOADING"})
+                dispatch({ type: "FORM_STOP_LOADING" })
             }
         } else {
             clearFormContents()
@@ -177,9 +180,9 @@ export default function NoteForm(props) {
     }
 
     const toggleModification = (state) => {
-        dispatch({type: "TOGGLE_MODIFICATION", payload: state})
+        dispatch({ type: "TOGGLE_MODIFICATION", payload: state })
     }
-    
+
     function renderHeader() {
         const note = props.note
         const mode = props.mode
@@ -242,65 +245,67 @@ export default function NoteForm(props) {
             )
         }
         return (
-    <div>
-        <div className="spinner"></div>
-        <span>{currentAction === 'create' ? 'Creating note...' : currentAction === 'update' ? 'Updating note...' : 'Deleting note...'}</span>
-    </div>
-)
+            <div>
+                <div className="spinner"></div>
+                <span>{currentAction === 'create' ? 'Creating note...' : currentAction === 'update' ? 'Updating note...' : 'Deleting note...'}</span>
+            </div>
+        )
     }
 
-return (
-    <div className="form-container">
-        <button
-            className="close-form-btn"
-            type="button"
-            onClick={() => !state.loading && props.closeForm()}
-        ></button>
-        <form action="" onSubmit={handleSubmit} className="note-form">
-            <header className="form-note-heading">
-                {renderHeader()}
-            </header>
-
-            <label htmlFor="note-title" className="form-note-title">
-                Title:
-                <input
-                    className="note-title-input"
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    readOnly={!state.modifying}
-                    autoFocus={props.mode === 'create'}
-                />
-            </label>
-
-            <label htmlFor="note-content" className="form-note-content">
-                <textarea
-                    className="note-content-input"
-                    type="text"
-                    name="content"
-                    value={formData.content}
-                    onChange={handleChange}
-                    readOnly={!state.modifying}
-                ></textarea>
-            </label>
-            {state.feedBack && <div className={`feedback-display ${state.error ? 'feedback-display-error' : ""}`}>{state.feedBack}</div>}
-            <nav className="form-buttons-wrapper">
-                <button className="form-btn save-note-btn" type="submit">
-                    Save
-                </button>
+    return (
+        <div className="form-wrapper">
+            <div className="form-container">
                 <button
-                    className="form-btn edit-note-btn"
+                    className="close-form-btn"
                     type="button"
-                    onClick={() => toggleModification(!state.modifying)}
-                >
-                    {state.modifying ? "Lock" : "Edit"}
-                </button>
-                <button className="form-btn delete-note-btn" type="button" onClick={() => handleDelete()}>
-                    Trash
-                </button>
-            </nav>
-        </form>
-    </div>
-);
+                    onClick={() => !state.loading && props.closeForm()}
+                ></button>
+                <form action="" onSubmit={handleSubmit} className="note-form">
+                    <header className="form-note-heading">
+                        {renderHeader()}
+                    </header>
+
+                    <label htmlFor="note-title" className="form-note-title">
+                        Title:
+                        <input
+                            className="note-title-input"
+                            type="text"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            readOnly={!state.modifying}
+                            autoFocus={props.mode === 'create'}
+                        />
+                    </label>
+
+                    <label htmlFor="note-content" className="form-note-content">
+                        <textarea
+                            className="note-content-input"
+                            type="text"
+                            name="content"
+                            value={formData.content}
+                            onChange={handleChange}
+                            readOnly={!state.modifying}
+                        ></textarea>
+                    </label>
+                    {state.feedBack && <div className={`feedback-display ${state.error ? 'feedback-display-error' : ""}`}>{state.feedBack}</div>}
+                    <nav className="form-buttons-wrapper">
+                        <button className="form-btn save-note-btn" type="submit">
+                            Save
+                        </button>
+                        <button
+                            className="form-btn edit-note-btn"
+                            type="button"
+                            onClick={() => toggleModification(!state.modifying)}
+                        >
+                            {state.modifying ? "Lock" : "Edit"}
+                        </button>
+                        <button className="form-btn delete-note-btn" type="button" onClick={() => handleDelete()}>
+                            Trash
+                        </button>
+                    </nav>
+                </form>
+            </div>
+        </div>
+    );
 }
