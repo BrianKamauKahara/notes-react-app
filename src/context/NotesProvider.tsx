@@ -60,22 +60,16 @@ export const useNotesContext = () => {
         }
     }, [])
 
-    const deleteNote = useCallback(async (noteId: NoteIdType): Promise<boolean> => {
-        if (window.confirm("Are you sure you want to delete this note?")) {
-            try {
-                await requestNoteDeletion(noteId)
-                setNotes(prev => {
-                    const { [noteId]: _, ...rest } = prev
-                    return rest
-                })
-
-                return true
-            } catch (err) {
-                console.error(err)
-                throw err
-            }
-        } else {
-            return false
+    const deleteNote = useCallback(async (noteId: NoteIdType): Promise<void> => {
+        try {
+            await requestNoteDeletion(noteId)
+            setNotes(prev => {
+                const { [noteId]: _, ...rest } = prev
+                return rest
+            })
+        } catch (err) {
+            console.error(err)
+            throw err
         }
     }, [])
 

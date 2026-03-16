@@ -1,30 +1,64 @@
-import { useReducer, useState } from "react";
+import { useReducer, useState, type ChangeEvent, type SubmitEvent } from "react";
 import "../css/NoteForm.css";
-import { requestSpecificNote, requestNoteUpdate, requestNoteDeletion, requestCreateNote } from "../api/notes"
 
-
+import { getCurrentDayFrom, type DateString } from "./Book";
+import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes";
+import useNotes from "../hooks/useNotes";
 // Util Functions
-const getCurrentDayFrom = (timestamp) => {
-    const date = new Date(timestamp);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-function isSameDay(date1, date2) {
+function isSameDay(date1: Date, date2: Date): boolean {
     if (!date1 || !date2) return false
 
     return (
-        date1.getFullYear() === date2.getFullYear() &&
+        date1.getDate() === date2.getDate() &&
         date1.getMonth() === date2.getMonth() &&
-        date1.getDate() === date2.getDate()
+        date1.getFullYear() === date2.getFullYear()
     )
+
 }
 
-const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
+type formattedDateType = {
+    date: Date,
+    day: DateString,
+    time: string,
+    string: string
+}
+export function formatNoteDates(dates: Date[]): formattedDateType[] {
+    return dates.map(
+        date => {
+            const day = getCurrentDayFrom(date)
+            const time = date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+            });
+
+            return {
+                date,
+                day,
+                time,
+                string: `${date.toDateString()}, ${time}`,
+            }
+        })
+}
+
+type ValidateNoteType = {
+    oldTitle: string | undefined,
+    newTitle: string | undefined,
+    oldContent: string | undefined,
+    newContent: string | undefined,
+    mode: FormModes
+}
+type ValidateNoteReturnType = {
+    isValid: true
+} | {
+    isValid: false,
+    reason: string
+}
+const validateNote = (note: NoteType | undefined, formData: NoteStructure, mode: FormModes): ValidateNoteReturnType => {
+    const oldTitle = note?.title
+    const oldContent = note?.content
+
+    const { title: newTitle, content: newContent } = formData
     if (!newTitle || !newContent) return {
         isValid: false,
         reason: `${!newTitle ? 'Content' : 'Title'} must be a non-empty string`
@@ -45,22 +79,86 @@ const validateNote = ({ oldTitle, newTitle, oldContent, newContent, mode }) => {
 }
 
 // A...
-const initialFormState = {
-    modifying: true,
-    feedBack: "",
+type FormModes = 'create' | 'update'
+type PossibleFormActions = 'create' | 'update' | 'delete'
+type FormStateType = {
+    isModifying: boolean,
+    loading: { action: PossibleFormActions } | false,
+    error: Error | null
+    feedBack: string
+}
+const initialFormState: FormStateType = {
+    isModifying: true,
     loading: false,
     error: null,
-    currentAction: null
+    feedBack: ''
+}
+// Reducer
+const FORM_REDUCER_ACTIONS = {
+    TOGGLE_MODIFICATION: "ENABLE_MODIFICATION",
+    FORM_START_LOADING: "FORM_START_LOADING",
+    FORM_STOP_LOADING: "FORM_STOP_LOADING",
+    CREATED_NOTE_SUCCESFULLY: "CREATED_NOTE_SUCCESFULLY",
+    UPDATED_NOTE_SUCCESFULLY: "UPDATED_NOTE_SUCCESFULLY",
+    DELETED_NOTE_SUCCESFULLY: "DELETED_NOTE_SUCCESFULLY",
+    OBTAINED_ERROR: "OBTAINED_ERROR"
+} as const
+type FORM_REDUCER_PAYLOADS = {
+    TOGGLE_MODIFICATION: boolean,
+    FORM_START_LOADING: PossibleFormActions,
+    OBTAINED_ERROR: { error: Error }
 }
 
-export default function NoteForm(props) {
-    // Form Controlled
-    const [formData, setFormData] = useState({
-        title: props.note?.title || "",
-        content: props.note?.content || ""
+type FormReducerAction = {
+    [K in keyof typeof FORM_REDUCER_ACTIONS]:
+    { type: K } &
+    (K extends keyof FORM_REDUCER_PAYLOADS
+        ? { payload: FORM_REDUCER_PAYLOADS[K] }
+        : {})
+}[keyof typeof FORM_REDUCER_ACTIONS]
+
+function formReducer(state: FormStateType, action: FormReducerAction): FormStateType {
+    switch (action.type) {
+        case "TOGGLE_MODIFICATION":
+            return { ...state, isModifying: !state.isModifying }
+
+        case "FORM_START_LOADING":
+            return { ...state, loading: { action: action.payload }, error: null, isModifying: false }
+
+        case "CREATED_NOTE_SUCCESFULLY":
+            return { ...state, feedBack: 'Created Note Succesfully', error: null }
+
+        case "UPDATED_NOTE_SUCCESFULLY":
+            return { ...state, feedBack: 'Updated Note Succesfully', error: null }
+
+        case "DELETED_NOTE_SUCCESFULLY":
+            return { ...state, feedBack: 'Deleted Note Succsesfully', error: null }
+
+        case "FORM_STOP_LOADING":
+            return { ...state, loading: false, isModifying: true }
+
+        case "OBTAINED_ERROR":
+            // console.log(action.payload.error)
+            const errorMessage: string = action.payload.error.message || 'An Error Has Occured'
+            return { ...state, error: action.payload.error, feedBack: errorMessage }
+    }
+}
+
+// Actual Form Component
+type NoteFormProps = {
+    note: NoteType | undefined,
+    openBlankForm: () => void,
+    openFilledForm: (noteId: NoteType['id']) => void,
+    closeForm: () => void
+}
+export default function NoteForm({ note, openBlankForm, openFilledForm, closeForm }: NoteFormProps) {
+    // Form Control
+    const [formData, setFormData] = useState<Pick<NoteType, 'title' | 'content'>>({
+        title: note?.title || "",
+        content: note?.content || ""
     })
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         const { name, value } = e.target
         setFormData(prev => ({
             ...prev,
@@ -73,128 +171,110 @@ export default function NoteForm(props) {
     }
 
     // Form State Handling
-    const [state, dispatch] = useReducer(reducer, initialFormState)
+    const [state, dispatch] = useReducer(formReducer, initialFormState)
+    const { createNote, updateNote, deleteNote } = useNotes()
 
-    function reducer(state, action) {
-        switch (action.type) {
-            case "TOGGLE_MODIFICATION":
-                return state.loading
-                    ? state
-                    : { ...state, modifying: !state.modifying }
-            case "FORM_START_LOADING":
-                return { ...state, loading: true, error: null, modifying: false, currentAction: action.payload }
-
-            case "CREATED_NOTE_SUCCESFULLY":
-                return { ...state, feedBack: 'Created Note Succesfully', error: null }
-
-            case "UPDATED_NOTE_SUCCESFULLY":
-                return { ...state, feedBack: 'Updated Note Succesfully', error: null }
-
-            case "DELETED_NOTE_SUCCESFULLY":
-                return { ...state, feedBack: 'Deleted Note Succsesfully', error: null }
-
-            case "FORM_STOP_LOADING":
-                return { ...state, currentAction: null, loading: false, modifying: true }
-
-            case "OBTAINED_ERROR":
-                console.log(action.payload?.error)
-                return { ...state, error: action.payload.error || true, feedBack: action.payload.feedBack || 'An Error Has Occured' }
-        }
-    }
-
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-
-        const result = validateNote({
-            oldTitle: props.note?.title,
-            oldContent: props.note?.content,
-            newTitle: formData.title,
-            newContent: formData.content,
-            mode: props.mode
-        })
-
-        if (!result.isValid) {
-            return displayInvalidMessage(result.reason)
-        }
-
-        try {
-            dispatch({
-                type: "FORM_START_LOADING",
-                payload: 'create'
-            })
-
-            let result
-            if (props.mode === 'create') {
-                const newNote = await props.createNote(formData)
-                props.selectNote(newNote.id)
-                dispatch({
-                    type: 'CREATED_NOTE_SUCCESFULLY',
-                })
-
-            } else {
-                await props.updateNote(props.note.id, formData)
-                dispatch({
-                    type: 'UPDATED_NOTE_SUCCESFULLY',
-                })
-            }
-
-        } catch (err) {
+    const dispatchError = (err: unknown) => {
+        if (err instanceof Error) {
             dispatch({
                 type: 'OBTAINED_ERROR',
                 payload: { error: err }
             })
-        } finally {
+        }
+        dispatch({
+            type: 'OBTAINED_ERROR',
+            payload: { error: new Error(String(err)) }
+        })
+    }
+
+    const dispatchLoading = (loading: boolean, action?: PossibleFormActions) => {
+        if (!loading) {
             dispatch({
                 type: 'FORM_STOP_LOADING'
             })
+            return
+        }
+        if (!action) {
+            throw new Error('Action not set')
+        }
+        dispatch({
+            type: 'FORM_START_LOADING',
+            payload: action
+        })
+    }
+
+    const runNoteCreate = async (data: NoteStructure) => {
+        if (note) throw new Error('Form opened in incorrect mode: Note exists yet note creation run')
+
+        const newNote = await createNote(data)
+        dispatch({
+            type: 'CREATED_NOTE_SUCCESFULLY',
+        })
+        openFilledForm(newNote.id)
+    }
+
+    const runNoteUpdate = async (data: NoteStructure) => {
+        if (!note) throw new Error('No note to update')
+
+        await updateNote(note.id, data)
+        openFilledForm(note.id)
+        dispatch({
+            type: 'UPDATED_NOTE_SUCCESFULLY',
+        })
+    }
+
+    const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault()
+
+        const result = validateNote(note, formData, note ? 'update' : 'create')
+
+        if (!result.isValid) {
+            dispatchError(result.reason)
+            return
+        }
+
+        try {
+            dispatchLoading(true, note ? 'update' : 'create')
+
+            if (!note) await runNoteCreate(formData)
+            else await runNoteUpdate(formData)
+        } catch (err: unknown) {
+            dispatchError(err)
+        } finally {
+            dispatchLoading(false)
         }
     }
 
     const handleDelete = async () => {
-        if (props.note) {
+        if (!note) return clearFormContents()
+
+        if (window.confirm("Are you sure you want to delete this note?")) {
             try {
-                dispatch({
-                    type: "FORM_START_LOADING",
-                    payload: 'delete'
-                })
-                const deleted = await props.deleteNote(props.note.id)
-                if (deleted) {
-                    dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })
-                    clearFormContents()
-                }
-            } catch (error) {
-                dispatch({ type: "OBTAINED_ERROR", payload: { error } })
+                dispatchLoading(true, 'delete')
+                await deleteNote(note.id)
+                dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })
+                openBlankForm()
+            } catch (err) {
+                dispatchError(err)
             } finally {
                 dispatch({ type: "FORM_STOP_LOADING" })
             }
-        } else {
-            clearFormContents()
         }
     }
 
-    const displayInvalidMessage = (reason) => {
-        dispatch({
-            type: 'OBTAINED_ERROR',
-            payload: { feedBack: reason }
-        })
-    }
-
-    const toggleModification = (state) => {
-        dispatch({ type: "TOGGLE_MODIFICATION", payload: state })
+    const toggleModification = (to: boolean) => {
+        dispatch({ type: "TOGGLE_MODIFICATION", payload: to })
     }
 
     function renderHeader() {
-        const note = props.note
-        const mode = props.mode
-        const currentAction = state.currentAction
-
         if (state.loading) {
+            const action = state.loading.action
 
             const loadingMessage = {
                 create: 'Creating note...',
                 update: 'Updating note...',
                 delete: 'Deleting note...'
-            }[currentAction]
+            }[action]
 
             return (
                 <>
@@ -204,50 +284,30 @@ export default function NoteForm(props) {
             )
         }
 
-        if (mode === 'create') {
+        if (!note) {
             return "New Note"
-        } else if (note && mode === "update") {
-            const formattedDates = [note.createdAt, note.updatedAt].map(date => {
-                const day = getCurrentDayFrom(date)
-                const time = date.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                });
-
-                return {
-                    date,
-                    day,
-                    time,
-                    string: `${date.toDateString()}, ${time}`,
-                }
-            })
-            const hasBeenEdited = note.createdAt.getTime() !== note.updatedAt.getTime()
-            const editedInSameDay = isSameDay(note.createdAt, note.updatedAt)
-            return (
-                <div className="form-times-wrapper">
-                    <time
-                        className="form-note-time form-note-time-created"
-                        dateTime={note.createdAt.toISOString()}
-                    >
-                        {formattedDates[0].string}
-                    </time>
-                    {hasBeenEdited && (
-                        <time
-                            className="form-note-time form-note-time-updated"
-                            dateTime={note.updatedAt.toISOString()}
-                        >
-                            last edited -{" "}
-                            {editedInSameDay ? formattedDates[1].time : formattedDates[1].string}
-                        </time>
-                    )}
-                </div>
-            )
         }
+
+        const formattedDates = formatNoteDates([note.createdAt, note.updatedAt])
+        const hasBeenEdited = note.createdAt.getTime() !== note.updatedAt.getTime()
+        const editedInSameDay = isSameDay(note.createdAt, note.updatedAt)
         return (
-            <div>
-                <div className="spinner"></div>
-                <span>{currentAction === 'create' ? 'Creating note...' : currentAction === 'update' ? 'Updating note...' : 'Deleting note...'}</span>
+            <div className="form-times-wrapper">
+                <time
+                    className="form-note-time form-note-time-created"
+                    dateTime={note.createdAt.toISOString()}
+                >
+                    {formattedDates[0]?.string}
+                </time>
+                {hasBeenEdited && (
+                    <time
+                        className="form-note-time form-note-time-updated"
+                        dateTime={note.updatedAt.toISOString()}
+                    >
+                        last edited -{" "}
+                        {editedInSameDay ? formattedDates[1]?.time : formattedDates[1]?.string}
+                    </time>
+                )}
             </div>
         )
     }
@@ -258,8 +318,9 @@ export default function NoteForm(props) {
                 <button
                     className="close-form-btn"
                     type="button"
-                    onClick={() => !state.loading && props.closeForm()}
+                    onClick={() => !state.loading && closeForm()}
                 ></button>
+
                 <form action="" onSubmit={handleSubmit} className="note-form">
                     <header className="form-note-heading">
                         {renderHeader()}
@@ -273,22 +334,23 @@ export default function NoteForm(props) {
                             name="title"
                             value={formData.title}
                             onChange={handleChange}
-                            readOnly={!state.modifying}
-                            autoFocus={props.mode === 'create'}
+                            readOnly={!state.isModifying}
+                            autoFocus={note !== undefined}
                         />
                     </label>
 
                     <label htmlFor="note-content" className="form-note-content">
                         <textarea
                             className="note-content-input"
-                            type="text"
                             name="content"
                             value={formData.content}
                             onChange={handleChange}
-                            readOnly={!state.modifying}
+                            readOnly={!state.isModifying}
                         ></textarea>
                     </label>
+
                     {state.feedBack && <div className={`feedback-display ${state.error ? 'feedback-display-error' : ""}`}>{state.feedBack}</div>}
+
                     <nav className="form-buttons-wrapper">
                         <button className="form-btn save-note-btn" type="submit">
                             Save
@@ -296,9 +358,9 @@ export default function NoteForm(props) {
                         <button
                             className="form-btn edit-note-btn"
                             type="button"
-                            onClick={() => toggleModification(!state.modifying)}
+                            onClick={() => toggleModification(!state.isModifying)}
                         >
-                            {state.modifying ? "Lock" : "Edit"}
+                            {state.isModifying ? "Lock" : "Edit"}
                         </button>
                         <button className="form-btn delete-note-btn" type="button" onClick={() => handleDelete()}>
                             Trash

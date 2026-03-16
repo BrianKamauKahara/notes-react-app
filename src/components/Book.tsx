@@ -1,17 +1,18 @@
-import { useLayoutEffect, useRef, useState, Fragment, type ReactElement, useReducer } from "react";
+import { useLayoutEffect, useRef, Fragment, type ReactElement, useReducer } from "react";
 import "../css/Book.css"
 import Note from "./Note";
 import NoteForm from "./NoteForm";
+import CreateNoteButton from "./CreateNoteButton";
 
 
 // Types
-import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes";
+import { type NormalizedNote as NoteType } from "../api/notes";
 import { type NotesStateType } from "../context/NotesProvider";
-import useNotes from "../hooks/useNotes";
-import CreateNoteButton from "./CreateNoteButton";
-type DateString = `${number}-${string}-${string}`
-
+export type DateString = `${number}-${string}-${string}`
 type DisplayObjType = Record<DateString, NoteType[]>
+
+// Custom Hooks
+import useNotes from "../hooks/useNotes";
 
 // Util functions
 function getDayElFrom(day: DateString): ReactElement {
@@ -26,7 +27,7 @@ function getDayElFrom(day: DateString): ReactElement {
     ;
 }
 
-const getCurrentDayFrom = (date: Date): DateString => {
+export const getCurrentDayFrom = (date: Date): DateString => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -55,16 +56,14 @@ type BookStateType = {
   columnCount: number,
   currentDisplayedColumns: [number, number],
   formOpen: boolean,
-  mode: 'create' | 'update'
-  selectedNoteId: NoteType["id"]
+  selectedNoteId: NoteType["id"] | null
 }
 const initBookState: BookStateType = {
   columnWidth: 0,
   columnCount: 2,
   currentDisplayedColumns: [1, 2],
   formOpen: false,
-  mode: 'create',
-  selectedNoteId: ''
+  selectedNoteId: null
 }
 
 // Reducer 
@@ -77,14 +76,16 @@ const BOOK_REDUCER_ACTIONS = {
 } as const
 type BOOK_REDUCER_PAYLOADS = {
   SET_NEW_COLUMNS: { totalWidth: number, viewingWidth: number },
-  OPEN_FORM: { mode: 'create' } | { mode: 'update', noteId: NoteType["id"] }
+  OPEN_FORM: NoteType["id"] | undefined
 }
 
 type BookReducerAction = {
   [K in keyof typeof BOOK_REDUCER_ACTIONS]:
   { type: K } &
   (K extends keyof BOOK_REDUCER_PAYLOADS
-    ? { payload: BOOK_REDUCER_PAYLOADS[K] }
+    ? (undefined extends BOOK_REDUCER_PAYLOADS[K]
+      ? { payload?: BOOK_REDUCER_PAYLOADS[K] }
+      : { payload: BOOK_REDUCER_PAYLOADS[K] })
     : {})
 }[keyof typeof BOOK_REDUCER_ACTIONS]
 
@@ -105,16 +106,12 @@ const bookReducer = (state: BookStateType, action: BookReducerAction): BookState
       return { ...state, currentDisplayedColumns: state.currentDisplayedColumns.map(v => v - 1) as [number, number] }
     }
     case "OPEN_FORM": {
-      const openMode = action.payload.mode
+      const noteId = action.payload || null
 
-      const formConfig = openMode === 'create'
-        ? { mode: 'create' as const }
-        : { mode: 'update' as const, selectedNoteId: action.payload.noteId }
-
-      return { ...state, formOpen: true, ...formConfig }
+      return { ...state, formOpen: true, selectedNoteId: noteId }
     }
     case "CLOSE_FORM": {
-      return { ...state, formOpen: false, selectedNoteId: '', mode: "create" }
+      return { ...state, formOpen: false, selectedNoteId: null }
     }
   }
 }
@@ -166,11 +163,11 @@ export default function Book() {
   }
 
   // Form features
-  const openCreateForm = () =>
-    dispatch({ type: "OPEN_FORM", payload: { mode: "create" } })
+  const openBlankForm = () =>
+    dispatch({ type: "OPEN_FORM" })
 
-  const openUpdateForm = (noteId: NoteType["id"]) =>
-    dispatch({ type: "OPEN_FORM", payload: { mode: "update", noteId } })
+  const openFilledForm = (noteId: NoteType["id"]) =>
+    dispatch({ type: "OPEN_FORM", payload: noteId })
 
   const closeForm = () =>
     dispatch({ type: "CLOSE_FORM" })
@@ -180,8 +177,8 @@ export default function Book() {
   function getNoteElFrom(note: NoteType) {
     return <Note
       key={note.id}
-      onSelect={() => { openUpdateForm(note.id) }}
-      onDelete={() => { openCreateForm() }}
+      onSelect={() => { openFilledForm(note.id) }}
+      onDelete={() => { openBlankForm() }}
       note={note}
     />
   }
@@ -208,7 +205,7 @@ export default function Book() {
     <>
       < CreateNoteButton
         isDisabled={state.formOpen}
-        onClick={openCreateForm}
+        onClick={openBlankForm}
       />
 
       <div className="book-container">
@@ -226,9 +223,9 @@ export default function Book() {
 
       {state.formOpen && (
         <NoteForm
-          noteId={selectNote(state.selectedNoteId)}
-          mode={state.mode}
-          onDelete={openUpdateForm}
+          note={state.selectedNoteId ? selectNote(state.selectedNoteId) : undefined}
+          openFilledForm={openFilledForm}
+          openBlankForm={openBlankForm}
           closeForm={closeForm}
         />
 
@@ -253,3 +250,4 @@ export default function Book() {
     </>
   );
 }
+
