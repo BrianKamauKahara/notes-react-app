@@ -178,7 +178,6 @@ export default function Book() {
     return <Note
       key={note.id}
       onSelect={() => { openFilledForm(note.id) }}
-      onDelete={() => { openBlankForm() }}
       note={note}
     />
   }

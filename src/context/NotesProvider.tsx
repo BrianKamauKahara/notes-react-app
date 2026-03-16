@@ -102,6 +102,7 @@ export const useNotesContext = () => {
         fetchNotes() // Fetch a complete batch of notes
             .then(fetchedNotes => setNotes(prev => ({ ...prev, ...convertNotesToObj(fetchedNotes) })))
             .catch((err: unknown) => {
+                console.log(err)
                 if (err instanceof Error) {
                     setIsError(err)
                 } else {
@@ -138,7 +139,7 @@ export const NotesContext = createContext<UseNotesContextType>(initNotesContextS
 
 // Provider
 const NotesProvider = ({ children }: { children: ReactNode }): ReactElement => {
-    const contextValue = useMemo(() => useNotesContext(), [])
+    const contextValue = useNotesContext()
     return (
         <NotesContext.Provider value={contextValue}>
             {children}
@@ -147,4 +148,5 @@ const NotesProvider = ({ children }: { children: ReactNode }): ReactElement => {
 
 }
 
+export default NotesProvider
 

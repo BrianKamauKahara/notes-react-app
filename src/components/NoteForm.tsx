@@ -1,21 +1,11 @@
 import { useReducer, useState, type ChangeEvent, type SubmitEvent } from "react";
 import "../css/NoteForm.css";
 
-import { getCurrentDayFrom, type DateString } from "./Book";
-import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes";
-import useNotes from "../hooks/useNotes";
+import { getCurrentDayFrom, type DateString } from "./Book"
+import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes"
+import useNotes from "../hooks/useNotes"
+
 // Util Functions
-function isSameDay(date1: Date, date2: Date): boolean {
-    if (!date1 || !date2) return false
-
-    return (
-        date1.getDate() === date2.getDate() &&
-        date1.getMonth() === date2.getMonth() &&
-        date1.getFullYear() === date2.getFullYear()
-    )
-
-}
-
 type formattedDateType = {
     date: Date,
     day: DateString,
@@ -40,14 +30,19 @@ export function formatNoteDates(dates: Date[]): formattedDateType[] {
             }
         })
 }
+function isSameDay(date1: Date, date2: Date): boolean {
+    if (!date1 || !date2) return false
 
-type ValidateNoteType = {
-    oldTitle: string | undefined,
-    newTitle: string | undefined,
-    oldContent: string | undefined,
-    newContent: string | undefined,
-    mode: FormModes
+    return (
+        date1.getDate() === date2.getDate() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getFullYear() === date2.getFullYear()
+    )
+
 }
+
+type FormModes = 'create' | 'update'
+
 type ValidateNoteReturnType = {
     isValid: true
 } | {
@@ -61,7 +56,7 @@ const validateNote = (note: NoteType | undefined, formData: NoteStructure, mode:
     const { title: newTitle, content: newContent } = formData
     if (!newTitle || !newContent) return {
         isValid: false,
-        reason: `${!newTitle ? 'Content' : 'Title'} must be a non-empty string`
+        reason: `${!newTitle ? 'Title' : 'Content'} must be a non-empty string`
     }
 
     if (mode !== 'create') {
@@ -78,8 +73,8 @@ const validateNote = (note: NoteType | undefined, formData: NoteStructure, mode:
     }
 }
 
-// A...
-type FormModes = 'create' | 'update'
+// Actual Form Prop
+// Form States and init State
 type PossibleFormActions = 'create' | 'update' | 'delete'
 type FormStateType = {
     isModifying: boolean,
@@ -93,6 +88,7 @@ const initialFormState: FormStateType = {
     error: null,
     feedBack: ''
 }
+
 // Reducer
 const FORM_REDUCER_ACTIONS = {
     TOGGLE_MODIFICATION: "ENABLE_MODIFICATION",
@@ -253,6 +249,7 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
                 dispatchLoading(true, 'delete')
                 await deleteNote(note.id)
                 dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })
+                clearFormContents()
                 openBlankForm()
             } catch (err) {
                 dispatchError(err)
