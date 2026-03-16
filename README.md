@@ -2,32 +2,39 @@
 
 Deployed Application: https://notes-react-app-seven.vercel.app/
 
+This documentation is mostly shallow, as the project is a small project, and I am still learning how to document software projects. Therefore, I employed the help of AI, yes, I know. I am willing to learn how to document my projects, but incrementally and eventually. 
+
 ## Table of Contents
 
-1. [Overview](#overview)  
-2. [Technology Stack](#technology-stack)  
-3. [Deployment](#deployment)  
-4. [Frontend Architecture](#frontend-architecture)  
-5. [Core Components](#core-components)  
+1. [Overview](#overview) 
+1. [Changelogs](#changelogs)
+1. [Technology Stack](#technology-stack)  
+1. [Deployment](#deployment)  
+1. [Frontend Architecture](#frontend-architecture)  
+1. [Core Components](#core-components)  
    - [Book Component](#book-component-container-component)  
    - [Note Component](#note-component)  
    - [Note Form Component](#note-form-component)  
-6. [State Management Strategy](#state-management-strategy)  
-7. [API Communication](#api-communication)  
-8. [Loading and Error Handling](#loading-and-error-handling)  
-9. [Styling Guidelines](#styling-guidelines)  
-10. [Performance Considerations](#performance-considerations)  
-11. [Testing Strategy](#testing-strategy)  
-12. [Deployment Notes](#deployment-notes)  
-13. [Environment Variables](#environment-variables)  
-14. [Future Frontend Improvements](#future-frontend-improvements)  
-15. [References](#references)
+1. [State Management Strategy](#state-management-strategy)  
+1. [API Communication](#api-communication)  
+1. [Loading and Error Handling](#loading-and-error-handling)  
+1. [Styling Guidelines](#styling-guidelines)  
+1. [Performance Considerations](#performance-considerations)  
+1. [Testing Strategy](#testing-strategy)  
+1. [Deployment Notes](#deployment-notes)  
+1. [Environment Variables](#environment-variables)  
+1. [Future Frontend Improvements](#future-frontend-improvements)  
+1. [References](#references)
 
 ## Overview
 
 The frontend of the **Student Notes Manager** is a React-based Single Page Application (SPA) responsible for user interaction, state presentation, and communication with the backend REST API.
 
 ---
+
+## Changelogs
+
+See [CHANGELOG.md](./CHANGELOG.md) for a detailed history of changes.
 
 ## Technology Stack
 
@@ -196,16 +203,21 @@ Reference design pattern:
 
 - Avoid unnecessary re-renders.
 - Avoid repeated backend fetches.
-
+- Not entirely sure what to add here.
 ---
 
 ## Future Frontend Improvements
 
 - Better responsiveness
+- Dark/light theme toggle 
 - Search functionality
 - Rich text editing support
-- Dark/light theme toggle
+
+and eventually,
 - Offline caching
+- Authorisation contexts
+
+Refer to: [Unreleased](./CHANGELOG.md#unreleased)
 
 ---
 

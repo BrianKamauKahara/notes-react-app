@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react'
 import useNotes from './hooks/useNotes'
 import Book from './components/Book'
-import Error from './components/MainPageError'
+import MainPageError from './components/MainPageError'
 import './App.css'
 
 function App(): ReactElement {
@@ -20,7 +20,7 @@ function App(): ReactElement {
             }
           </main>
         </> :
-        <Error error={error} />}
+        <MainPageError error={error} />}
     </>
   )
 }

@@ -94,23 +94,23 @@ type BookReducerAction = {
 const bookReducer = (state: BookStateType, action: BookReducerAction): BookStateType => {
   switch (action.type) {
     // Book Actions
-    case "SET_NEW_COLUMNS": {
+    case BOOK_REDUCER_ACTIONS.SET_NEW_COLUMNS: {
       const { totalWidth, viewingWidth } = action.payload
 
       return { ...state, columnWidth: viewingWidth / 2, columnCount: Math.round(totalWidth / (viewingWidth / 2)) }
     }
-    case "GO_NEXT_PAGES": {
+    case BOOK_REDUCER_ACTIONS.GO_NEXT_PAGES: {
       return { ...state, currentDisplayedColumns: state.currentDisplayedColumns.map(v => v + 1) as [number, number] }
     }
-    case "GO_PREVIOUS_PAGES": {
+    case BOOK_REDUCER_ACTIONS.GO_PREVIOUS_PAGES: {
       return { ...state, currentDisplayedColumns: state.currentDisplayedColumns.map(v => v - 1) as [number, number] }
     }
-    case "OPEN_FORM": {
+    case BOOK_REDUCER_ACTIONS.OPEN_FORM: {
       const noteId = action.payload || null
 
       return { ...state, formOpen: true, selectedNoteId: noteId }
     }
-    case "CLOSE_FORM": {
+    case BOOK_REDUCER_ACTIONS.CLOSE_FORM: {
       return { ...state, formOpen: false, selectedNoteId: null }
     }
   }
@@ -198,8 +198,11 @@ export default function Book() {
         )
       })
   }
+
+  // Snapshots
   const renderedNotes = renderNotes()
   const transformPx = (state.currentDisplayedColumns[0] - 1) * state.columnWidth
+
   return (
     <>
       < CreateNoteButton
@@ -234,7 +237,7 @@ export default function Book() {
         id="prev-page-btn"
         ref={prevPageBtnRef}
         className="page-switch-btn"
-        onClick={() => transformPage(0)}
+        onClick={() => { transformPage(0) }}
       >
         {"<"}
       </button>
@@ -242,7 +245,7 @@ export default function Book() {
         id="next-page-btn"
         ref={nextPageBtnRef}
         className="page-switch-btn"
-        onClick={() => transformPage(1)}
+        onClick={() => { transformPage(1) }}
       >
         {">"}
       </button>

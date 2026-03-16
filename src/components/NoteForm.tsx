@@ -1,11 +1,16 @@
+// IMPORTS
 import { useReducer, useState, type ChangeEvent, type SubmitEvent } from "react";
 import "../css/NoteForm.css";
 
-import { getCurrentDayFrom, type DateString } from "./Book"
+// Types
 import { type NormalizedNote as NoteType, type PassNoteDetails as NoteStructure } from "../api/notes"
+
+// Custom Hooks
 import useNotes from "../hooks/useNotes"
 
-// Util Functions
+// - - UTIL Functions
+// Date Formatting Functions
+import { getCurrentDayFrom, type DateString } from "./Book"
 type formattedDateType = {
     date: Date,
     day: DateString,
@@ -41,15 +46,14 @@ function isSameDay(date1: Date, date2: Date): boolean {
 
 }
 
-type FormModes = 'create' | 'update'
-
+// Note Validation Functions
 type ValidateNoteReturnType = {
     isValid: true
 } | {
     isValid: false,
     reason: string
 }
-const validateNote = (note: NoteType | undefined, formData: NoteStructure, mode: FormModes): ValidateNoteReturnType => {
+const validateNote = (note: NoteType | undefined, formData: NoteStructure, mode: 'create' | 'update'): ValidateNoteReturnType => {
     const oldTitle = note?.title
     const oldContent = note?.content
 
@@ -73,7 +77,7 @@ const validateNote = (note: NoteType | undefined, formData: NoteStructure, mode:
     }
 }
 
-// Actual Form Prop
+// - - Actual Form Prop
 // Form States and init State
 type PossibleFormActions = 'create' | 'update' | 'delete'
 type FormStateType = {
@@ -91,17 +95,14 @@ const initialFormState: FormStateType = {
 
 // Reducer
 const FORM_REDUCER_ACTIONS = {
-    TOGGLE_MODIFICATION: "ENABLE_MODIFICATION",
-    FORM_START_LOADING: "FORM_START_LOADING",
-    FORM_STOP_LOADING: "FORM_STOP_LOADING",
-    CREATED_NOTE_SUCCESFULLY: "CREATED_NOTE_SUCCESFULLY",
-    UPDATED_NOTE_SUCCESFULLY: "UPDATED_NOTE_SUCCESFULLY",
-    DELETED_NOTE_SUCCESFULLY: "DELETED_NOTE_SUCCESFULLY",
+    TOGGLE_MODIFICATION: "TOGGLE_MODIFICATION",
+    FORM_START_OPERATION: "FORM_START_OPERATION",
+    OPERATION_COMPLETE: "OPERATION_COMPLETE",
     OBTAINED_ERROR: "OBTAINED_ERROR"
 } as const
 type FORM_REDUCER_PAYLOADS = {
     TOGGLE_MODIFICATION: boolean,
-    FORM_START_LOADING: PossibleFormActions,
+    FORM_START_OPERATION: PossibleFormActions,
     OBTAINED_ERROR: { error: Error }
 }
 
@@ -115,28 +116,19 @@ type FormReducerAction = {
 
 function formReducer(state: FormStateType, action: FormReducerAction): FormStateType {
     switch (action.type) {
-        case "TOGGLE_MODIFICATION":
+        case FORM_REDUCER_ACTIONS.TOGGLE_MODIFICATION:
             return { ...state, isModifying: !state.isModifying }
 
-        case "FORM_START_LOADING":
+        case FORM_REDUCER_ACTIONS.FORM_START_OPERATION:
             return { ...state, loading: { action: action.payload }, error: null, isModifying: false }
 
-        case "CREATED_NOTE_SUCCESFULLY":
-            return { ...state, feedBack: 'Created Note Succesfully', error: null }
+        case FORM_REDUCER_ACTIONS.OPERATION_COMPLETE:
+            return { ...state, loading: false, error: null, isModifying: true }
 
-        case "UPDATED_NOTE_SUCCESFULLY":
-            return { ...state, feedBack: 'Updated Note Succesfully', error: null }
-
-        case "DELETED_NOTE_SUCCESFULLY":
-            return { ...state, feedBack: 'Deleted Note Succsesfully', error: null }
-
-        case "FORM_STOP_LOADING":
-            return { ...state, loading: false, isModifying: true }
-
-        case "OBTAINED_ERROR":
+        case FORM_REDUCER_ACTIONS.OBTAINED_ERROR:
             // console.log(action.payload.error)
             const errorMessage: string = action.payload.error.message || 'An Error Has Occured'
-            return { ...state, error: action.payload.error, feedBack: errorMessage }
+            return { ...state, error: action.payload.error, feedBack: errorMessage, loading: false }
     }
 }
 
@@ -183,10 +175,10 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
         })
     }
 
-    const dispatchLoading = (loading: boolean, action?: PossibleFormActions) => {
-        if (!loading) {
+    const dispatchOperation = (mode: 'begin' | 'end', action?: PossibleFormActions) => {
+        if (mode === 'end') {
             dispatch({
-                type: 'FORM_STOP_LOADING'
+                type: 'OPERATION_COMPLETE'
             })
             return
         }
@@ -194,7 +186,7 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
             throw new Error('Action not set')
         }
         dispatch({
-            type: 'FORM_START_LOADING',
+            type: 'FORM_START_OPERATION',
             payload: action
         })
     }
@@ -203,9 +195,6 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
         if (note) throw new Error('Form opened in incorrect mode: Note exists yet note creation run')
 
         const newNote = await createNote(data)
-        dispatch({
-            type: 'CREATED_NOTE_SUCCESFULLY',
-        })
         openFilledForm(newNote.id)
     }
 
@@ -214,11 +203,9 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
 
         await updateNote(note.id, data)
         openFilledForm(note.id)
-        dispatch({
-            type: 'UPDATED_NOTE_SUCCESFULLY',
-        })
     }
 
+    // Form Actions
     const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
 
@@ -230,14 +217,14 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
         }
 
         try {
-            dispatchLoading(true, note ? 'update' : 'create')
+            dispatchOperation('begin', note ? 'update' : 'create')
 
             if (!note) await runNoteCreate(formData)
             else await runNoteUpdate(formData)
+
+            dispatchOperation('end')
         } catch (err: unknown) {
             dispatchError(err)
-        } finally {
-            dispatchLoading(false)
         }
     }
 
@@ -246,15 +233,15 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
 
         if (window.confirm("Are you sure you want to delete this note?")) {
             try {
-                dispatchLoading(true, 'delete')
+                dispatchOperation('begin', 'delete')
                 await deleteNote(note.id)
-                dispatch({ type: "DELETED_NOTE_SUCCESFULLY" })
+
                 clearFormContents()
                 openBlankForm()
+
+                dispatchOperation('end')
             } catch (err) {
                 dispatchError(err)
-            } finally {
-                dispatch({ type: "FORM_STOP_LOADING" })
             }
         }
     }
@@ -263,6 +250,7 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
         dispatch({ type: "TOGGLE_MODIFICATION", payload: to })
     }
 
+    // Rendering Functions
     function renderHeader() {
         if (state.loading) {
             const action = state.loading.action
@@ -309,6 +297,9 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
         )
     }
 
+    // Snapshots
+    const headerContent = renderHeader()
+
     return (
         <div className="form-wrapper">
             <div className="form-container">
@@ -320,7 +311,7 @@ export default function NoteForm({ note, openBlankForm, openFilledForm, closeFor
 
                 <form action="" onSubmit={handleSubmit} className="note-form">
                     <header className="form-note-heading">
-                        {renderHeader()}
+                        {headerContent}
                     </header>
 
                     <label htmlFor="note-title" className="form-note-title">
