@@ -1,0 +1,28 @@
+import { type ReactElement } from 'react'
+import useNotes from './hooks/useNotes'
+import Book from './components/Book'
+import MainPageError from './components/MainPageError'
+import './App.css'
+
+function App(): ReactElement {
+  const { loading, error } = useNotes()
+  // console.log(loading)
+
+  return (
+    <>
+      {!error ?
+        <>
+          <header className='main-header'>Jot It Down...</header>
+          <main className="book-wrapper">
+            {loading ?
+              <div className="book-loading">Loading Your Notes...</div> :
+              <Book />
+            }
+          </main>
+        </> :
+        <MainPageError error={error} />}
+    </>
+  )
+}
+
+export default App
